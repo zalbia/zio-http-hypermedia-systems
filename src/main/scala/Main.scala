@@ -1,7 +1,12 @@
 import zio._
-import zio.Console.printLine
+import zio.http._
 
 object Main extends ZIOAppDefault {
-  override def run: ZIO[Environment with ZIOAppArgs with Scope, Any, Any] =
-    printLine("Welcome to your first ZIO app!")
+  val app: HttpApp[Any] =
+    Routes(
+      Method.GET / "text" -> handler(Response.text("Hello World!"))
+    ).toHttpApp
+
+  override val run: ZIO[Environment with ZIOAppArgs with Scope, Any, Any] =
+    Server.serve(app).provide(Server.default)
 }
