@@ -1,15 +1,39 @@
-ThisBuild / scalaVersion := "2.13.12"
-ThisBuild / version := "0.1.0-SNAPSHOT"
-ThisBuild / organization := "com.example"
-ThisBuild / organizationName := "example"
+import BuildHelper.*
+import Libraries.*
 
-lazy val root = (project in file("."))
-  .settings(
-    name := "zio-http-hypermedia-systems",
-    libraryDependencies ++= Seq(
-      "dev.zio" %% "zio" % "2.0.19",
-      "dev.zio" %% "zio-http" % "3.0.0-RC3",
-      "dev.zio" %% "zio-test" % "2.0.19" % Test
-    ),
-    testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
-  )
+Global / onChangedBuildSource := ReloadOnSourceChanges
+
+ThisBuild / scalaVersion               := "2.13.12"
+ThisBuild / version                    := "0.1.0-SNAPSHOT"
+ThisBuild / organization               := "com.github.zalbia"
+ThisBuild / scalafmtCheck              := true
+ThisBuild / scalafmtSbtCheck           := true
+ThisBuild / scalafmtOnCompile          := !insideCI.value
+ThisBuild / semanticdbEnabled          := true
+ThisBuild / semanticdbOptions += "-P:semanticdb:synthetics:on"
+ThisBuild / semanticdbVersion          := scalafixSemanticdb.revision // use Scalafix compatible version
+ThisBuild / scalafixScalaBinaryVersion := CrossVersion.binaryScalaVersion(scalaVersion.value)
+ThisBuild / scalafixDependencies ++= List(
+  "com.github.vovapolu"                      %% "scaluzzi" % "0.1.23",
+  "io.github.ghostbuster91.scalafix-unified" %% "unified"  % "0.0.9",
+)
+
+// copied from @guizmaii
+addCommandAlias("tc", "Test/compile")
+addCommandAlias("ctc", "clean; Test/compile")
+addCommandAlias("rctc", "reload; clean; Test/compile")
+addCommandAlias("start", "~root/reStart")
+addCommandAlias("stop", "reStop")
+addCommandAlias("restart", "stop;start")
+addCommandAlias("rst", "restart")
+
+lazy val root =
+  (project in file("."))
+    .settings(stdSettings*)
+    .settings(Revolver.enableDebugging())
+    .settings(reLogTag := "zio-http-htmx")
+    .settings(
+      name := "zio-http-htmx",
+      libraryDependencies ++= Seq(zioHttp) ++ loggingRuntime,
+      testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
+    )

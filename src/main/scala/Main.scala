@@ -1,5 +1,5 @@
-import zio._
-import zio.http._
+import zio.*
+import zio.http.*
 
 object Main extends ZIOAppDefault {
   val app: HttpApp[Any] =
