@@ -7,6 +7,6 @@ object Main extends ZIOAppDefault {
       Method.GET / "text" -> handler(Response.text("Hello World!"))
     ).toHttpApp
 
-  override val run: ZIO[Environment with ZIOAppArgs with Scope, Any, Any] =
+  override val run: ZIO[Environment & ZIOAppArgs & Scope, Any, Any] =
     Server.serve(app).provide(Server.default)
 }
