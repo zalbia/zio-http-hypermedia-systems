@@ -25,7 +25,6 @@ object BuildHelper {
         "-Ymacro-annotations",
         "-Xsource:3",
         s"-release:$javaTarget",
-        "-Wconf:src=twirl/.*:is", // https://github.com/playframework/twirl/issues/105#issuecomment-1012413623
       ),
       scalacOptions --= (if (insideCI.value) Nil else Seq("-Xfatal-warnings")), // enforced by the pre-push hook too
       // format: off

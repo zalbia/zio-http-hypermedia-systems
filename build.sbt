@@ -8,7 +8,6 @@ ThisBuild / version                    := "0.1.0-SNAPSHOT"
 ThisBuild / organization               := "com.github.zalbia"
 ThisBuild / scalafmtCheck              := true
 ThisBuild / scalafmtSbtCheck           := true
-ThisBuild / scalafmtOnCompile          := !insideCI.value
 ThisBuild / semanticdbEnabled          := true
 ThisBuild / semanticdbOptions += "-P:semanticdb:synthetics:on"
 ThisBuild / semanticdbVersion          := scalafixSemanticdb.revision // use Scalafix compatible version
