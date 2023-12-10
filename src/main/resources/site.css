@@ -75,6 +75,10 @@ input[type=text]::placeholder {
     margin-right: 0.5em;
 }
 
+#archive-ui {
+    margin-bottom: 1em;
+}
+
 [data-overflow-menu] {
     visibility: hidden;
 }

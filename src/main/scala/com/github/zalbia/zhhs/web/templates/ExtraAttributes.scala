@@ -3,7 +3,10 @@ package com.github.zalbia.zhhs.web.templates
 import zio.http.template.Attributes.PartialAttribute
 
 object ExtraAttributes {
-  final def `@click`: PartialAttribute[String]               = PartialAttribute("@click")
+  final def `@click`: PartialAttribute[String] = PartialAttribute("@click")
+
+  final def _Attr: PartialAttribute[String] = PartialAttribute("_")
+
   final def ariaAttr(name: String): PartialAttribute[String] = PartialAttribute("aria-" + name)
 
   final def hxAttr(name: String): PartialAttribute[String] = PartialAttribute("hx-" + name)
