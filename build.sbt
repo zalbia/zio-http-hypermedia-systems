@@ -30,9 +30,9 @@ lazy val root =
   (project in file("."))
     .settings(stdSettings*)
     .settings(Revolver.enableDebugging())
-    .settings(reLogTag := "zio-http-htmx")
+    .settings(reLogTag := "zio-http-hypermedia-systems")
     .settings(
-      name := "zio-http-htmx",
+      name := "zio-http-hypermedia-systems",
       libraryDependencies ++= Seq(zioHttp) ++ loggingRuntime,
       testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
     )
