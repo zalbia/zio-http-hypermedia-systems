@@ -3,7 +3,6 @@ package com.github.zalbia.zhhs
 import com.github.zalbia.zhhs.templates.*
 import zio.http.*
 import zio.http.Middleware.*
-import zio.http.template.Html
 
 object Router {
 
@@ -11,6 +10,6 @@ object Router {
 
   val routes: HttpApp[Any] =
     Routes(
-      Method.GET / "" -> Handler.html(Layout("", Nil))
+      Method.GET / "" -> Handler.html(Layout("", List.empty))
     ).toHttpApp @@ cors(corsConfig)
 }
