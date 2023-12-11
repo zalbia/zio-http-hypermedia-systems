@@ -6,10 +6,12 @@ import zio.http.Middleware.*
 
 object Router {
 
-  private val corsConfig: CorsConfig = CorsConfig(allowedOrigin = _ => Some(Header.AccessControlAllowOrigin.All))
+  private val corsConfig = CorsConfig(allowedOrigin = _ => Some(Header.AccessControlAllowOrigin.All))
 
-  val routes: HttpApp[Any] =
+  private val staticPath = Middleware.serveResources(Path.empty / "static")
+
+  val routes =
     Routes(
-      Method.GET / "" -> Handler.html(Layout("", List.empty))
-    ).toHttpApp @@ cors(corsConfig)
+      Method.GET / "" -> Handler.html(Layout.noFlashedMessages(""))
+    ).toHttpApp @@ cors(corsConfig) @@ staticPath
 }

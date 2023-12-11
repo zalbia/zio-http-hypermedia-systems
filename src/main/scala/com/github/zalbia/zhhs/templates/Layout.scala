@@ -31,4 +31,6 @@ object Layout {
         ),
       ),
     )
+
+  def noFlashedMessages(blockContent: Html): Html = apply(blockContent, flashedMessages = List.empty)
 }
