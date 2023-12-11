@@ -12,6 +12,9 @@ object Router {
 
   val routes =
     Routes(
-      Method.GET / "" -> Handler.html(Layout.noFlashedMessages(""))
+      Method.GET / ""         ->
+        Handler.response(Response.redirect(URL.root / "contacts")),
+      Method.GET / "contacts" ->
+        Handler.html(Layout.noFlashedMessages("")),
     ).toHttpApp @@ cors(corsConfig) @@ staticPath
 }
