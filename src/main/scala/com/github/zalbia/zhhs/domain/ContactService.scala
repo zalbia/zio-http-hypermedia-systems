@@ -3,7 +3,7 @@ package com.github.zalbia.zhhs.domain
 import com.github.zalbia.zhhs.Settings
 import zio.*
 trait ContactService {
-  def search(query: String, page: Int): UIO[List[Contact]]
+  def search(query: Option[String], page: Int): UIO[List[Contact]]
 }
 
 object ContactService {
@@ -29,17 +29,21 @@ object ContactService {
 
   def live: ULayer[ContactService] = ZLayer.succeed {
     new ContactService {
-      override def search(query: String, page: Int): UIO[List[Contact]] = {
+      override def search(query: Option[String], page: Int): UIO[List[Contact]] = {
         val pageStart = (page - 1) * Settings.pageSize
         val pageEnd   = pageStart + Settings.pageSize
         ZIO.succeed(
-          contacts
-            .filter { c =>
-              c.firstname.exists(_.contains(query)) ||
-              c.lastname.exists(_.contains(query)) ||
-              c.phone.exists(_.contains(query)) ||
-              c.email.contains(query)
+          query
+            .map { query =>
+              contacts
+                .filter { c =>
+                  c.firstname.exists(_.toLowerCase.contains(query.toLowerCase)) ||
+                  c.lastname.exists(_.toLowerCase.contains(query.toLowerCase)) ||
+                  c.phone.exists(_.toLowerCase.contains(query.toLowerCase)) ||
+                  c.email.toLowerCase.contains(query.toLowerCase)
+                }
             }
+            .getOrElse(contacts)
             .slice(pageStart, pageEnd)
         )
       }
