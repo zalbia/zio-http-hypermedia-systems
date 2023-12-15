@@ -17,6 +17,8 @@ ThisBuild / scalafixDependencies ++= List(
   "io.github.ghostbuster91.scalafix-unified" %% "unified"  % "0.0.9",
 )
 
+addCommandAlias("fmt", "scalafmtAll; scalafmtSbt; scalafix")
+
 // copied from @guizmaii
 addCommandAlias("tc", "Test/compile")
 addCommandAlias("ctc", "clean; Test/compile")

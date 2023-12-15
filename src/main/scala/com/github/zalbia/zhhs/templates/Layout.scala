@@ -4,6 +4,7 @@ import ExtraAttributes.*
 import ExtraElements.*
 import zio.http.template.*
 
+/** Master Layout */
 object Layout {
   def apply(blockContent: Html, flashedMessages: List[String]): Html =
     html(
@@ -15,10 +16,10 @@ object Layout {
         script(srcAttr   := "https://unpkg.com/htmx.org@1.9.9"),
         script(srcAttr   := "https://unpkg.com/hyperscript.org@0.9.12"),
         script(srcAttr   := "/static/js/rsjs-menu.js"),
-        script(deferAttr := "", srcAttr := "https://unpkg.com/alpinejs@3/dist/cdn.min.js"),
+        script(deferAttr := "defer", srcAttr := "https://unpkg.com/alpinejs@3/dist/cdn.min.js"),
       ),
       body(
-        htmxAttr("boost") := "true",
+        hxAttr("boost") := "true",
         main(
           header(
             h1(
