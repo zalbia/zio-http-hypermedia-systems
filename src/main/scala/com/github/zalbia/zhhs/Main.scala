@@ -1,6 +1,7 @@
 package com.github.zalbia.zhhs
 
 import com.github.zalbia.zhhs.domain.ContactService
+import com.github.zalbia.zhhs.web.Router
 import zio.*
 import zio.http.*
 import zio.http.Server.{Config, RequestStreaming}

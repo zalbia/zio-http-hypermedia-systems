@@ -1,10 +1,10 @@
-package com.github.zalbia.zhhs.templates
+package com.github.zalbia.zhhs.web.templates
 
 import com.github.zalbia.zhhs.domain.Contact
-import com.github.zalbia.zhhs.templates.ExtraAttributes.*
+import ExtraAttributes.*
 import zio.http.template.*
 
-object Rows {
+object RowsTemplate {
   def apply(contacts: List[Contact]): List[Dom] =
     contacts.map { contact =>
       val firstname = contact.firstname.getOrElse("N/A")

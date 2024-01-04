@@ -1,12 +1,12 @@
-package com.github.zalbia.zhhs.templates
+package com.github.zalbia.zhhs.web.templates
 
 import ExtraAttributes.*
 import ExtraElements.*
 import zio.http.template.*
 
 /** Master Layout */
-object Layout {
-  def apply(blockContent: Html, flashedMessages: List[String]): Html =
+object LayoutTemplate {
+  def apply(blockContent: Html, flashMessage: Option[String]): Html =
     html(
       langAttr := "",
       head(
@@ -27,11 +27,11 @@ object Layout {
               subTitle("A Demo Contacts Application"),
             )
           ),
-          flashedMessages.map(div(classAttr := List("flash"), _)),
+          flashMessage.map(div(classAttr := List("flash"), _)),
           blockContent,
         ),
       ),
     )
 
-  def noFlashedMessages(blockContent: Html): Html = apply(blockContent, flashedMessages = List.empty)
+  def noFlashedMessages(blockContent: Html): Html = apply(blockContent, flashMessage = None)
 }
