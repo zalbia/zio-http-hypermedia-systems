@@ -1,8 +1,16 @@
 package com.github.zalbia.zhhs.domain
 
 import com.github.zalbia.zhhs.Settings
+import com.github.zalbia.zhhs.domain.SaveContactError.{EmailAlreadyExistsError, MissingEmailError}
+import com.github.zalbia.zhhs.web.templates.ContactFormData
 import zio.*
 trait ContactService {
+  def delete(id: String): IO[ContactIdDoesNotExist, Unit]
+
+  def find(contactId: String): UIO[Option[Contact]]
+
+  def save(contact: ContactFormData): IO[SaveContactError, Unit]
+
   def search(query: Option[String], page: Int): UIO[List[Contact]]
 }
 
@@ -27,26 +35,59 @@ object ContactService {
     Contact("19", None, None, None, "restexample2@example.com"),
   )
 
-  def live: ULayer[ContactService] = ZLayer.succeed {
-    new ContactService {
-      override def search(query: Option[String], page: Int): UIO[List[Contact]] = {
-        val pageStart = (page - 1) * Settings.pageSize
-        val pageEnd   = pageStart + Settings.pageSize
-        ZIO.succeed(
-          query
-            .map { query =>
-              contacts
-                .filter { c =>
-                  c.firstname.exists(_.toLowerCase.contains(query.toLowerCase)) ||
-                  c.lastname.exists(_.toLowerCase.contains(query.toLowerCase)) ||
-                  c.phone.exists(_.toLowerCase.contains(query.toLowerCase)) ||
-                  c.email.toLowerCase.contains(query.toLowerCase)
-                }
-            }
-            .getOrElse(contacts)
-            .slice(pageStart, pageEnd)
-        )
+  def live: ULayer[ContactService] =
+    ZLayer.fromZIO(Ref.make(contacts).map { contactsRef =>
+      new ContactService {
+        override def delete(id: String): IO[ContactIdDoesNotExist, Unit] =
+          if (contacts.exists(_.id == id))
+            contactsRef.update(_.filterNot(_.id == id))
+          else
+            ZIO.fail(ContactIdDoesNotExist(id))
+
+        override def find(contactId: String): UIO[Option[Contact]] =
+          contactsRef.get.map(_.find(_.id == contactId))
+
+        override def save(contact: ContactFormData): IO[SaveContactError, Unit] =
+          for {
+            email     <- validateEmail(contact)
+            id        <- nextId
+            newContact = Contact(id, contact.firstname, contact.lastname, contact.phone, email)
+            _         <- contactsRef.update(_ :+ newContact)
+          } yield ()
+
+        private def validateEmail(form: ContactFormData) =
+          form.email match {
+            case Some(email) =>
+              if (contacts.exists(contact => email == contact.email))
+                ZIO.fail(EmailAlreadyExistsError(email))
+              else
+                ZIO.succeed(email)
+            case None        =>
+              ZIO.fail(MissingEmailError)
+          }
+
+        /** Generates IDs by getting the max ID number + 1 */
+        private def nextId: UIO[String] =
+          contactsRef.get.map(_.map(_.id.toInt).max + 1).map(_.toString)
+
+        override def search(query: Option[String], page: Int): UIO[List[Contact]] = {
+          val pageStart = (page - 1) * Settings.pageSize
+          val pageEnd   = pageStart + Settings.pageSize
+          ZIO.succeed(
+            query
+              .map { query =>
+                contacts
+                  .filter { c =>
+                    c.firstname.exists(_.toLowerCase.contains(query.toLowerCase)) ||
+                    c.lastname.exists(_.toLowerCase.contains(query.toLowerCase)) ||
+                    c.phone.exists(_.toLowerCase.contains(query.toLowerCase)) ||
+                    c.email.toLowerCase.contains(query.toLowerCase)
+                  }
+              }
+              .getOrElse(contacts)
+              .slice(pageStart, pageEnd)
+          )
+        }
       }
-    }
-  }
+    })
 }

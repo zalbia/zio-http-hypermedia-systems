@@ -1,10 +1,10 @@
-package com.github.zalbia.zhhs.templates
+package com.github.zalbia.zhhs.web.templates
 
-import ExtraAttributes.*
-import ExtraElements.*
 import com.github.zalbia.zhhs.domain.Contact
+import com.github.zalbia.zhhs.web.templates.ExtraAttributes.*
+import com.github.zalbia.zhhs.web.templates.ExtraElements.*
 import zio.http.template.*
-object Index {
+object IndexTemplate {
 
   private def searchForm(query: Option[String]): Html =
     form(
@@ -40,11 +40,11 @@ object Index {
         div(
           classAttr := List("box", "info", "tool-bar", "fixed", "top"),
           slot(xAttr("text")         := "selected.length"),
-          "contacts selected",
+          " contact(s) selected",
           button(
             typeAttr                 := "button",
             classAttr                := List("bad", "bg", "color", "border"),
-            `@click`                 := "confirm(`Delete ${selected.length} contacts?`) && htmx.ajax('DELETE', '/contacts', { source: $root, target: document.body })",
+            `@click`                 := "confirm(`Delete ${selected.length} contact(s)?`) && htmx.ajax('DELETE', '/contacts', { source: $root, target: document.body })",
             "Delete",
           ),
           hr(ariaAttr("orientation") := "vertical"),
@@ -62,7 +62,7 @@ object Index {
             th(),
           )
         ),
-        tBody(Rows(contacts)),
+        tBody(RowsTemplate(contacts)),
       ),
       button(
         hxAttr("delete")  := "/contacts",
@@ -74,7 +74,7 @@ object Index {
 
   def addContact: Html =
     p(
-      a(hrefAttr          := "/contacts/new"),
+      a(hrefAttr          := "/contacts/new", "Add Contact"),
       span(
         hxAttr("get")     := "/contacts/count",
         hxAttr("trigger") := "revealed",
@@ -87,11 +87,15 @@ object Index {
       ),
     )
 
-  def apply(query: Option[String] = None, contacts: List[Contact] = List.empty, flashedMessages: List[String] = List.empty): Html =
-    Layout(
+  def apply(
+    query: Option[String] = None,
+    contacts: List[Contact] = List.empty,
+    flashMessage: Option[String] = None,
+  ): Html =
+    LayoutTemplate(
       searchForm(query) ++
         contactsForm(contacts) ++
         addContact,
-      flashedMessages,
+      flashMessage,
     )
 }

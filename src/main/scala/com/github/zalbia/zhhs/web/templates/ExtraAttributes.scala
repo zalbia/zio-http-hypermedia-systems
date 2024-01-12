@@ -1,4 +1,4 @@
-package com.github.zalbia.zhhs.templates
+package com.github.zalbia.zhhs.web.templates
 
 import zio.http.template.Attributes.PartialAttribute
 
