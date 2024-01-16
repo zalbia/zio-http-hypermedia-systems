@@ -14,9 +14,9 @@ object Router {
   val routes: HttpApp[ContactService] =
     Routes(
       Method.GET / ""                           -> Response.redirect(URL.root / "contacts").toHandler,
+      Method.DELETE / "contacts" / string("id") -> ContactController.handleDeleteContact,
       Method.POST / "contacts" / "new"          -> ContactController.handleNewContactSubmit,
       Method.GET / "contacts" / "new"           -> Handler.html(NewContactTemplate(ContactFormData.empty)),
       Method.GET / "contacts"                   -> ContactController.handleContacts,
-      Method.DELETE / "contacts" / string("id") -> ContactController.handleDeleteContact,
     ).toHttpApp @@ cors(corsConfig) @@ staticPath
 }

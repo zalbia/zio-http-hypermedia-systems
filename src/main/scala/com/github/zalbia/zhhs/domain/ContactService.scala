@@ -5,9 +5,9 @@ import com.github.zalbia.zhhs.domain.SaveContactError.{EmailAlreadyExistsError, 
 import com.github.zalbia.zhhs.web.templates.ContactFormData
 import zio.*
 trait ContactService {
-  def delete(id: String): IO[ContactIdDoesNotExist, Unit]
+  def all: UIO[List[Contact]]
 
-  def find(contactId: String): UIO[Option[Contact]]
+  def delete(id: String): IO[ContactIdDoesNotExist, Unit]
 
   def save(contact: ContactFormData): IO[SaveContactError, Unit]
 
@@ -38,14 +38,14 @@ object ContactService {
   def live: ULayer[ContactService] =
     ZLayer.fromZIO(Ref.make(contacts).map { contactsRef =>
       new ContactService {
+        override def all: UIO[List[Contact]] =
+          contactsRef.get.map(_.take(Settings.pageSize))
+
         override def delete(id: String): IO[ContactIdDoesNotExist, Unit] =
           if (contacts.exists(_.id == id))
             contactsRef.update(_.filterNot(_.id == id))
           else
             ZIO.fail(ContactIdDoesNotExist(id))
-
-        override def find(contactId: String): UIO[Option[Contact]] =
-          contactsRef.get.map(_.find(_.id == contactId))
 
         override def save(contact: ContactFormData): IO[SaveContactError, Unit] =
           for {

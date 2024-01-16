@@ -2,31 +2,38 @@ package com.github.zalbia.zhhs.web
 
 import com.github.zalbia.zhhs.domain.SaveContactError.*
 import com.github.zalbia.zhhs.domain.{ContactService, SaveContactError}
-import com.github.zalbia.zhhs.web.templates.{ContactFormData, IndexTemplate}
+import com.github.zalbia.zhhs.web.templates.*
 import zio.ZIO
 import zio.http.*
 import zio.durationInt
 
-import scala.util.Try
-
 private[web] object ContactController {
 
-  private val defaultPage = 1
+  
 
   val handleContacts: Handler[ContactService, Nothing, Request, Response] =
     Handler.fromFunctionZIO { (request: Request) =>
-      val query = request.url.queryParams.get("q")
-      val page  = request.url.queryParams.get("page").flatMap(p => Try(p.toInt).toOption)
-      ZIO
-        .serviceWithZIO[ContactService](_.search(query, page.getOrElse(defaultPage)))
-        .map(contacts => Response.html(IndexTemplate(query, contacts, request.flashMessage)))
+      val search = request.url.queryParams.get("q")
+      val page   = request.url.queryParams.get("page").map(_.toInt).getOrElse(1) // unsafe!
+      for {
+        contactService <- ZIO.service[ContactService]
+        contactsFound  <- search match {
+                            case None => contactService.all
+                            case _    => contactService.search(search, page)
+                          }
+      } yield {
+        if (request.headers.get("HX-Trigger").contains("search"))
+          Response.html(RowsTemplate(contactsFound))
+        else
+          Response.html(IndexTemplate(search, contactsFound, request.flashMessage))
+      }
     }
 
   val handleDeleteContact: Handler[ContactService, Nothing, (String, Request), Response] =
     Handler.fromFunctionZIO { case (contactId, request) =>
       ZIO
         .serviceWithZIO[ContactService](_.delete(contactId))
-        .as {
+        .as(
           if (request.headers.get("HX-Trigger").contains("delete-btn"))
             Response(status = Status.SeeOther, headers = Headers(Header.Location(URL.root / "contacts")))
               .addCookie(
@@ -38,7 +45,7 @@ private[web] object ContactController {
               )
           else
             Response.text("")
-        }
+        )
         .catchAll(e =>
           ZIO.succeed(
             Response.error(
