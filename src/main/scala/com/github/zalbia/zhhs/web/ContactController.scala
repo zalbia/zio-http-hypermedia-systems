@@ -1,5 +1,6 @@
 package com.github.zalbia.zhhs.web
 
+import com.github.zalbia.zhhs.Settings
 import com.github.zalbia.zhhs.domain.SaveContactError.*
 import com.github.zalbia.zhhs.domain.{ContactService, SaveContactError}
 import com.github.zalbia.zhhs.web.templates.*
@@ -8,8 +9,6 @@ import zio.http.*
 import zio.durationInt
 
 private[web] object ContactController {
-
-  
 
   val handleContacts: Handler[ContactService, Nothing, Request, Response] =
     Handler.fromFunctionZIO { (request: Request) =>
@@ -58,7 +57,7 @@ private[web] object ContactController {
 
   val handleNewContactSubmit: Handler[ContactService, Nothing, Request, Response] =
     Handler.fromFunctionZIO { (request: Request) =>
-      saveNewContact(request).debug("save new contact").catchAll {
+      saveNewContact(request).catchAll {
         case SaveContactError.DecodingError     =>
           ZIO.succeed(Response.error(Status.BadRequest, "New contact form contact form could be parsed from the request"))
         case EmailAlreadyExistsError(email)     =>
@@ -84,7 +83,7 @@ private[web] object ContactController {
         Cookie.Response(
           name = "zio-http-flash",
           content = "Created New Contact",
-          maxAge = Some(30.seconds),
+          maxAge = Some(Settings.flashMessageMaxAge),
         )
       )
 }

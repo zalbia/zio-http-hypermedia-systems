@@ -52,6 +52,7 @@ object ContactService {
             email     <- validateEmail(contact)
             id        <- nextId
             newContact = Contact(id, contact.firstname, contact.lastname, contact.phone, email)
+            _          = println(s"new contact: $newContact")
             _         <- contactsRef.update(_ :+ newContact)
           } yield ()
 
@@ -73,7 +74,7 @@ object ContactService {
         override def search(query: Option[String], page: Int): UIO[List[Contact]] = {
           val pageStart = (page - 1) * Settings.pageSize
           val pageEnd   = pageStart + Settings.pageSize
-          ZIO.succeed(
+          contactsRef.get.map { contacts =>
             query
               .map { query =>
                 contacts
@@ -86,7 +87,7 @@ object ContactService {
               }
               .getOrElse(contacts)
               .slice(pageStart, pageEnd)
-          )
+          }
         }
       }
     })
