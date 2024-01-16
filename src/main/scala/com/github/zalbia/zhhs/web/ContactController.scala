@@ -9,8 +9,7 @@ import zio.http.*
 import zio.durationInt
 
 private[web] object ContactController {
-
-  val handleContacts: Handler[ContactService, Nothing, Request, Response] =
+  val contacts: Handler[ContactService, Nothing, Request, Response] =
     Handler.fromFunctionZIO { (request: Request) =>
       val search = request.url.queryParams.get("q")
       val page   = request.url.queryParams.get("page").map(_.toInt).getOrElse(1) // unsafe!
@@ -28,7 +27,12 @@ private[web] object ContactController {
       }
     }
 
-  val handleDeleteContact: Handler[ContactService, Nothing, (String, Request), Response] =
+  val contactsCount: Handler[ContactService, Nothing, Request, Response] =
+    Handler.responseZIO {
+      ZIO.serviceWithZIO[ContactService](_.count).map(count => Response.text(s"($count total contacts)"))
+    }
+
+  val contactDelete: Handler[ContactService, Nothing, (String, Request), Response] =
     Handler.fromFunctionZIO { case (contactId, request) =>
       ZIO
         .serviceWithZIO[ContactService](_.delete(contactId))
@@ -55,35 +59,70 @@ private[web] object ContactController {
         )
     }
 
-  val handleNewContactSubmit: Handler[ContactService, Nothing, Request, Response] =
+  val contactsDelete: Handler[ContactService, Nothing, Request, Response] =
     Handler.fromFunctionZIO { (request: Request) =>
-      saveNewContact(request).catchAll {
-        case SaveContactError.DecodingError     =>
-          ZIO.succeed(Response.error(Status.BadRequest, "New contact form contact form could be parsed from the request"))
-        case EmailAlreadyExistsError(email)     =>
-          ZIO.succeed(Response.error(Status.BadRequest, s"Email '$email' already exists."))
-        case SaveContactError.MissingEmailError =>
-          ZIO.succeed(Response.error(Status.BadRequest, "An email is required for adding contacts."))
-      }
+      for {
+        contactService <- ZIO.service[ContactService]
+        selectedIds    <- request.body.asURLEncodedForm.orDie
+                            .map(_.formData.collect { case FormField.Simple("selected_contact_ids", value) => value })
+        contactIds      = selectedIds.map(_.split(',')).flatten.toSet
+        _              <- contactService.deleteAll(contactIds)
+      } yield Response
+        .seeOther(URL.root / "contacts")
+        .addCookie(
+          Cookie.Response(
+            name = "zio-http-flash",
+            content = "Deleted Contacts",
+            maxAge = Some(5.seconds),
+          )
+        )
     }
 
-  private def saveNewContact(request: Request) =
-    for {
-      form   <- request.body.asURLEncodedForm.orElseFail(DecodingError)
-      contact = ContactFormData(
-                  firstname = form.get("first_name").flatMap(_.stringValue),
-                  lastname = form.get("last_name").flatMap(_.stringValue),
-                  phone = form.get("phone").flatMap(_.stringValue),
-                  email = form.get("email").flatMap(_.stringValue),
-                )
-      _      <- ZIO.serviceWithZIO[ContactService](_.save(contact))
-    } yield Response
-      .seeOther(URL.root / "contacts")
-      .addCookie(
-        Cookie.Response(
-          name = "zio-http-flash",
-          content = "Created New Contact",
-          maxAge = Some(Settings.flashMessageMaxAge),
-        )
+  val contactsNewPost: Handler[ContactService, Nothing, Request, Response] =
+    Handler.fromFunctionZIO { (request: Request) =>
+      request.body.asURLEncodedForm.foldZIO(
+        _ => ZIO.succeed(Response.error(Status.BadRequest, "Contact form data could not be parsed from the request")),
+        form => {
+          val contactFormData = parseContactFormData(form)
+          saveNewContact(form).catchAll {
+            case EmailAlreadyExistsError(email)     =>
+              val formDataWithError = contactFormData.addError(s"""Email "$email" already exists""")
+              ZIO.succeed(Response.html(NewContactTemplate(formDataWithError)))
+            case SaveContactError.MissingEmailError =>
+              val formDataWithError = contactFormData.addError(s"An email is required")
+              ZIO.succeed(Response.html(NewContactTemplate(formDataWithError)))
+          }
+        },
       )
+    }
+
+  private def saveNewContact(form: Form) = {
+    val contact = ContactFormData(
+      firstname = form.get("first_name").flatMap(_.stringValue),
+      lastname = form.get("last_name").flatMap(_.stringValue),
+      phone = form.get("phone").flatMap(_.stringValue),
+      email = form.get("email").flatMap(_.stringValue),
+    )
+    ZIO
+      .serviceWithZIO[ContactService](_.save(contact))
+      .as(
+        Response
+          .seeOther(URL.root / "contacts")
+          .addCookie(
+            Cookie.Response(
+              name = "zio-http-flash",
+              content = "Created New Contact",
+              maxAge = Some(Settings.flashMessageMaxAge),
+            )
+          )
+      )
+  }
+
+  private def parseContactFormData(form: Form) =
+    ContactFormData(
+      firstname = form.get("first_name").flatMap(_.stringValue),
+      lastname = form.get("last_name").flatMap(_.stringValue),
+      phone = form.get("phone").flatMap(_.stringValue),
+      email = form.get("email").flatMap(_.stringValue),
+    )
 }

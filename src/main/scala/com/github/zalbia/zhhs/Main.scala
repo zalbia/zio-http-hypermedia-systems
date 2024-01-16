@@ -1,7 +1,7 @@
 package com.github.zalbia.zhhs
 
 import com.github.zalbia.zhhs.domain.ContactService
-import com.github.zalbia.zhhs.web.Router
+import com.github.zalbia.zhhs.web.AppRoutes
 import zio.*
 import zio.http.*
 import zio.http.Server.{Config, RequestStreaming}
@@ -63,6 +63,6 @@ object Main extends ZIOAppDefault {
       Scope
 
   override def run: ZIO[AppEnv, Any, Any] =
-    (bootSequence *> Server.serve(Router.routes))
+    (bootSequence *> Server.serve(AppRoutes.routes))
       .provide(server, ContactService.live)
 }

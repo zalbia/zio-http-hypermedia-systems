@@ -1,5 +1,6 @@
 package com.github.zalbia.zhhs.web.templates
 
+import com.github.zalbia.zhhs.web.templates.ContactFormData.ErrorField
 import zio.http.template.*
 
 object NewContactTemplate {
@@ -23,7 +24,7 @@ object NewContactTemplate {
               placeholderAttr := "Email",
               valueAttr       := contactFormData.email.getOrElse(""),
             ),
-            span(classAttr    := List("error"), s"${contactFormData.errors.getOrElse("email", "")}"),
+            span(classAttr    := List("error"), s"${contactFormData.errors.getOrElse(ErrorField.Email, "")}"),
           ),
           p(
             label(forAttr     := "first_name", "First Name"),
@@ -34,7 +35,7 @@ object NewContactTemplate {
               placeholderAttr := "First Name",
               valueAttr       := contactFormData.firstname.getOrElse(""),
             ),
-            span(classAttr    := List("error"), s"${contactFormData.errors.getOrElse("firstname", "")}"),
+            span(classAttr    := List("error"), ""),
           ),
           p(
             label(forAttr     := "last_name", "Last Name"),
@@ -45,7 +46,7 @@ object NewContactTemplate {
               placeholderAttr := "Last Name",
               valueAttr       := contactFormData.lastname.getOrElse(""),
             ),
-            span(classAttr    := List("error"), s"${contactFormData.errors.getOrElse("lastname", "")}"),
+            span(classAttr    := List("error"), ""),
           ),
           p(
             label(forAttr     := "phone", "Phone"),
@@ -56,7 +57,7 @@ object NewContactTemplate {
               placeholderAttr := "Phone",
               valueAttr       := contactFormData.phone.getOrElse(""),
             ),
-            span(classAttr    := List("error"), s"${contactFormData.errors.getOrElse("phone", "")}"),
+            span(classAttr    := List("error"), ""),
           ),
         ),
         button("Save"),

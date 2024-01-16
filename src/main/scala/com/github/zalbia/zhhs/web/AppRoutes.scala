@@ -5,7 +5,7 @@ import com.github.zalbia.zhhs.web.templates.{ContactFormData, NewContactTemplate
 import zio.http.*
 import zio.http.Middleware.*
 
-object Router {
+object AppRoutes {
 
   private val corsConfig = CorsConfig(allowedOrigin = _ => Some(Header.AccessControlAllowOrigin.All))
 
@@ -14,9 +14,11 @@ object Router {
   val routes: HttpApp[ContactService] =
     Routes(
       Method.GET / ""                           -> Response.redirect(URL.root / "contacts").toHandler,
-      Method.DELETE / "contacts" / string("id") -> ContactController.handleDeleteContact,
-      Method.POST / "contacts" / "new"          -> ContactController.handleNewContactSubmit,
+      Method.GET / "contacts" / "count"         -> ContactController.contactsCount,
+      Method.POST / "contacts" / "new"          -> ContactController.contactsNewPost,
       Method.GET / "contacts" / "new"           -> Handler.html(NewContactTemplate(ContactFormData.empty)),
-      Method.GET / "contacts"                   -> ContactController.handleContacts,
+      Method.DELETE / "contacts" / string("id") -> ContactController.contactDelete,
+      Method.DELETE / "contacts"                -> ContactController.contactsDelete,
+      Method.GET / "contacts"                   -> ContactController.contacts,
     ).toHttpApp @@ cors(corsConfig) @@ staticPath
 }
