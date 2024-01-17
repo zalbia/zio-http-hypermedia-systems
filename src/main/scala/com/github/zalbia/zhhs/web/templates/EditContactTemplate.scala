@@ -1,16 +1,17 @@
 package com.github.zalbia.zhhs.web.templates
 
+import com.github.zalbia.zhhs.web.templates.EditContactFormData.ErrorField
 import com.github.zalbia.zhhs.web.templates.ExtraAttributes.*
 import zio.http.template.*
 
 object EditContactTemplate {
 
   def apply(contact: EditContactFormData): Html =
-    editForm(contact) ++ deleteButton(contact.id) ++ backLink
+    LayoutTemplate.noFlashedMessages(editForm(contact) ++ deleteButton(contact.id) ++ backLink)
 
-  private def editForm(contact: EditContactFormData): Html =
+  private def editForm(contactFormData: EditContactFormData): Html =
     form(
-      actionAttr := s"/contacts/${contact.id}/edit",
+      actionAttr := s"/contacts/${contactFormData.id}/edit",
       methodAttr := "post",
       fieldSet(
         legend("Contact Values"),
@@ -22,13 +23,13 @@ object EditContactTemplate {
               nameAttr          := "email",
               idAttr            := "email",
               typeAttr          := "email",
-              hxAttr("get")     := s"/contacts/${contact.id}/email",
+              hxAttr("get")     := s"/contacts/${contactFormData.id}/email",
               hxAttr("target")  := "next .error",
               hxAttr("trigger") := "change, keyup delay:200ms",
               placeholderAttr   := "email@example.com",
-              valueAttr         := contact.email.getOrElse(""),
+              valueAttr         := contactFormData.email.getOrElse(""),
             ),
-            span(classAttr      := List("error"), contact.errors(EditContactFormData.ErrorField.Email)),
+            span(classAttr      := List("error"), s"${contactFormData.errors.getOrElse(ErrorField.Email, "")}"),
           ),
           p(
             label(forAttr     := "first_name", "First Name"),
@@ -37,7 +38,7 @@ object EditContactTemplate {
               idAttr          := "first_name",
               typeAttr        := "text",
               placeholderAttr := "Juan",
-              valueAttr       := contact.firstname.getOrElse(""),
+              valueAttr       := contactFormData.firstname.getOrElse(""),
             ),
             span(classAttr    := List("error")),
           ),
@@ -48,7 +49,7 @@ object EditContactTemplate {
               idAttr          := "last_name",
               typeAttr        := "text",
               placeholderAttr := "de la Cruz",
-              valueAttr       := contact.lastname.getOrElse(""),
+              valueAttr       := contactFormData.lastname.getOrElse(""),
             ),
             span(classAttr    := List("error")),
           ),
@@ -59,7 +60,7 @@ object EditContactTemplate {
               idAttr          := "phone",
               typeAttr        := "text",
               placeholderAttr := "+63 123 456 7890",
-              valueAttr       := contact.phone.getOrElse(""),
+              valueAttr       := contactFormData.phone.getOrElse(""),
             ),
             span(classAttr    := List("error")),
           ),
@@ -75,6 +76,7 @@ object EditContactTemplate {
       hxAttr("push-url") := "true",
       hxAttr("confirm")  := "Are you sure you want to delete this contact?",
       hxAttr("target")   := "body",
+      "Delete Button",
     )
 
   private lazy val backLink: Html =

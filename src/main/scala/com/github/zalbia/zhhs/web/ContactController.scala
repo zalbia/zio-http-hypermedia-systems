@@ -21,7 +21,7 @@ private[web] object ContactController {
     Method.GET / "contacts" / string("id") / "edit" -> ContactController.contactsIdEdit,
   )
 
-  val contacts: Handler[ContactService, Nothing, Request, Response] =
+  private val contacts: Handler[ContactService, Nothing, Request, Response] =
     Handler.fromFunctionZIO { (request: Request) =>
       val search = request.url.queryParams.get("q")
       val page   = request.url.queryParams.get("page").map(_.toInt).getOrElse(1) // unsafe!
@@ -39,7 +39,7 @@ private[web] object ContactController {
       }
     }
 
-  val contactsView: Handler[ContactService, Nothing, (String, Request), Response] =
+  private val contactsView: Handler[ContactService, Nothing, (String, Request), Response] =
     Handler.fromFunctionZIO { case (contactId, _) =>
       ZIO.serviceWithZIO[ContactService](_.find(contactId)).map {
         case Some(contact) =>
@@ -49,24 +49,26 @@ private[web] object ContactController {
       }
     }
 
-  val contactsNew: Handler[Any, Nothing, Any, Response] = Handler.html(NewContactTemplate(NewContactFormData.empty))
+  private val contactsNew: Handler[Any, Nothing, Any, Response] = Handler.html(NewContactTemplate(NewContactFormData.empty))
 
-  val contactsIdEdit: Handler[ContactService, Nothing, (String, Request), Response] =
+  private val contactsIdEdit: Handler[ContactService, Nothing, (String, Request), Response] =
     Handler.fromFunctionZIO { case (contactId, _) =>
-      ZIO.serviceWithZIO[ContactService](_.find(contactId).debug("contact found")).map {
-        case Some(contact) =>
-          Response.html(EditContactTemplate(EditContactFormData.from(contact)))
-        case None          =>
-          Response.notFound(s"Contact with ID '$contactId' not found")
-      }
+      ZIO
+        .serviceWithZIO[ContactService](_.find(contactId))
+        .map {
+          case Some(contact) =>
+            Response.html(EditContactTemplate(EditContactFormData.from(contact)))
+          case None          =>
+            Response.notFound(s"Contact with ID '$contactId' not found")
+        }
     }
 
-  val contactsCount: Handler[ContactService, Nothing, Request, Response] =
+  private val contactsCount: Handler[ContactService, Nothing, Request, Response] =
     Handler.responseZIO {
       ZIO.serviceWithZIO[ContactService](_.count).map(count => Response.text(s"($count total contacts)"))
     }
 
-  val contactsIdDelete: Handler[ContactService, Nothing, (String, Request), Response] =
+  private val contactsIdDelete: Handler[ContactService, Nothing, (String, Request), Response] =
     Handler.fromFunctionZIO { case (contactId, request) =>
       ZIO
         .serviceWithZIO[ContactService](_.delete(contactId))
@@ -93,7 +95,7 @@ private[web] object ContactController {
         )
     }
 
-  val contactsDelete: Handler[ContactService, Nothing, Request, Response] =
+  private val contactsDelete: Handler[ContactService, Nothing, Request, Response] =
     Handler.fromFunctionZIO { (request: Request) =>
       for {
         contactService <- ZIO.service[ContactService]
@@ -112,7 +114,7 @@ private[web] object ContactController {
         )
     }
 
-  val contactsNewPost: Handler[ContactService, Nothing, Request, Response] =
+  private val contactsNewPost: Handler[ContactService, Nothing, Request, Response] =
     Handler.fromFunctionZIO { (request: Request) =>
       request.body.asURLEncodedForm.foldZIO(
         _ => ZIO.succeed(Response.error(Status.BadRequest, "Contact form data could not be parsed from the request")),
