@@ -62,6 +62,7 @@ object ContactService {
                       (Some(EmailAlreadyExistsError(email)), contacts)
                     else {
                       // Generates IDs by getting the max ID number + 1. Unsafe use of toInt!!!
+                      // We're getting away with it as the preloaded ID's are numbers by convention.
                       val nextId     = (contacts.map(_.id.toInt).max + 1).toString
                       val newContact = Contact(
                         id = nextId,
