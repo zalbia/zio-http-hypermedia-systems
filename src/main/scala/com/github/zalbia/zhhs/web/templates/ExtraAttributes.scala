@@ -11,4 +11,6 @@ object ExtraAttributes {
   final def roleAttr: PartialAttribute[String] = PartialAttribute("role")
 
   final def xAttr(name: String): PartialAttribute[String] = PartialAttribute("x-" + name)
+
+  final def crossOriginAttr: PartialAttribute[String] = PartialAttribute("crossorigin")
 }

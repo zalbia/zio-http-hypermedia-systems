@@ -1,7 +1,7 @@
 package com.github.zalbia.zhhs.web.templates
 
-import ExtraAttributes.*
-import ExtraElements.*
+import com.github.zalbia.zhhs.web.templates.ExtraAttributes.*
+import com.github.zalbia.zhhs.web.templates.ExtraElements.*
 import zio.http.template.*
 
 /** Master Layout */
@@ -13,10 +13,14 @@ object LayoutTemplate {
         title("Contact App"),
         link(relAttr("stylesheet"), hrefAttr("https://unpkg.com/missing.css@1.1.1")),
         link(relAttr("stylesheet"), hrefAttr("/static/site.css")),
-        script(srcAttr   := "https://unpkg.com/htmx.org@1.9.9"),
-        script(srcAttr   := "https://unpkg.com/hyperscript.org@0.9.12"),
-        script(srcAttr   := "/static/js/rsjs-menu.js"),
-        script(deferAttr := "defer", srcAttr := "https://unpkg.com/alpinejs@3/dist/cdn.min.js"),
+        script(srcAttr    := "https://unpkg.com/htmx.org@1.9.9", crossOriginAttr         := "anonymous"),
+        script(srcAttr    := "https://unpkg.com/hyperscript.org@0.9.12", crossOriginAttr := "anonymous"),
+        script(
+          deferAttr       := "defer",
+          srcAttr         := "https://unpkg.com/alpinejs@3/dist/cdn.min.js",
+          crossOriginAttr := "anonymous",
+        ),
+        script(srcAttr    := "/static/js/rsjs-menu.js"),
       ),
       body(
         hxAttr("boost") := "true",
