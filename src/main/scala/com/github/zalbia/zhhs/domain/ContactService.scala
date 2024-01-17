@@ -1,7 +1,7 @@
 package com.github.zalbia.zhhs.domain
 
 import com.github.zalbia.zhhs.Settings
-import com.github.zalbia.zhhs.domain.SaveContactError.{EmailAlreadyExistsError, MissingEmailError}
+import com.github.zalbia.zhhs.domain.ContactServiceError.*
 import zio.*
 
 trait ContactService {
@@ -17,6 +17,8 @@ trait ContactService {
   def save(newContact: NewContactDto): IO[SaveContactError, Unit]
 
   def search(query: Option[String], page: Int): UIO[List[Contact]]
+
+  def update(updateContact: UpdateContactDto): IO[UpdateContactError, Unit]
 }
 
 object ContactService {
@@ -24,7 +26,7 @@ object ContactService {
     ZLayer.fromZIO(Ref.make(preloadedContacts).map { contactsRef =>
       new ContactService {
         override def all: UIO[List[Contact]] =
-          contactsRef.get.map(_.take(Settings.pageSize))
+          contactsRef.get.map(_.take(Settings.pageSize).toList)
 
         override def count: UIO[Int] =
           contactsRef.get.map(_.length)
@@ -46,32 +48,73 @@ object ContactService {
         override def find(contactId: String): UIO[Option[Contact]] =
           contactsRef.get.map(_.find(_.id == contactId))
 
-        override def save(contact: NewContactDto): IO[SaveContactError, Unit] =
-          for {
-            email     <- validateEmail(contact)
-            id        <- nextId
-            newContact = Contact(id, contact.firstname, contact.lastname, contact.phone, email)
-            _         <- contactsRef.update(_ :+ newContact)
-          } yield ()
+        override def save(newContactDto: NewContactDto): IO[SaveContactError, Unit] =
+          contactsRef
+            .modify { contacts =>
+              newContactDto.email match {
+                case Some(email) =>
+                  val trimmedEmail = email.trim
+                  if (trimmedEmail.isEmpty)
+                    (Some(MissingEmailError), contacts)
+                  else {
+                    val emailAlreadyExists = contacts.exists(contact => trimmedEmail == contact.email)
+                    if (emailAlreadyExists)
+                      (Some(EmailAlreadyExistsError(email)), contacts)
+                    else {
+                      // Generates IDs by getting the max ID number + 1. Unsafe use of toInt!!!
+                      val nextId     = (contacts.map(_.id.toInt).max + 1).toString
+                      val newContact = Contact(
+                        id = nextId,
+                        firstname = newContactDto.firstname,
+                        lastname = newContactDto.lastname,
+                        phone = newContactDto.phone,
+                        email = trimmedEmail,
+                      )
+                      (None, contacts :+ newContact)
+                    }
+                  }
+                case None        =>
+                  (Some(MissingEmailError), contacts)
+              }
+            }
+            .flatMap(ZIO.fromOption(_).flip)
+            .unit
 
-        private def validateEmail(form: NewContactDto) =
-          form.email match {
-            case Some(email) =>
-              val trimmedEmail = email.trim
-              if (trimmedEmail.isEmpty)
-                ZIO.fail(MissingEmailError)
-              else
-                ZIO.ifZIO(contactsRef.get.map(_.exists(contact => trimmedEmail == contact.email)))(
-                  ZIO.fail(EmailAlreadyExistsError(email)),
-                  ZIO.succeed(trimmedEmail),
-                )
-            case None        =>
-              ZIO.fail(MissingEmailError)
-          }
+        override def update(update: UpdateContactDto): IO[UpdateContactError, Unit] =
+          contactsRef
+            .modify { contacts =>
+              val oldContact = contacts.find(_.id == update.contactId)
+              (oldContact, update.email) match {
+                case (None, _)                              =>
+                  (Some(ContactIdDoesNotExist(update.contactId)), contacts)
+                case (_, None)                              =>
+                  (Some(MissingEmailError), contacts)
+                case (Some(oldContact), Some(updatedEmail)) =>
+                  val trimmedEmail = updatedEmail.trim
+                  if (trimmedEmail.isEmpty)
+                    (Some(MissingEmailError), contacts)
+                  else {
+                    val emailAlreadyExists = contacts.exists(contact => trimmedEmail == contact.email)
+                    val emailChanged       = oldContact.email != updatedEmail
+                    if (emailChanged && emailAlreadyExists)
+                      (Some(EmailAlreadyExistsError(updatedEmail)), contacts)
+                    else {
+                      val updatedContact = Contact(
+                        id = update.contactId,
+                        firstname = update.firstname,
+                        lastname = update.lastname,
+                        phone = update.phone,
+                        email = updatedEmail,
+                      )
 
-        // Generates IDs by getting the max ID number + 1. Unsafe use of toInt!!!
-        private def nextId: UIO[String] =
-          contactsRef.get.map(_.map(_.id.toInt).max + 1).map(_.toString)
+                      val updateIndex = contacts.indexWhere(_.id == updatedContact.id)
+                      (None, contacts.updated(updateIndex, updatedContact))
+                    }
+                  }
+              }
+            }
+            .flatMap(ZIO.fromOption(_).flip)
+            .unit
 
         override def search(query: Option[String], page: Int): UIO[List[Contact]] = {
           val pageStart = (page - 1) * Settings.pageSize
@@ -89,12 +132,13 @@ object ContactService {
               }
               .getOrElse(contacts)
               .slice(pageStart, pageEnd)
+              .toList
           }
         }
       }
     })
 
-  private val preloadedContacts = List(
+  private val preloadedContacts = Chunk(
     Contact("2", Some("Carson"), Some("Gross"), Some("123-456-7890"), "carson@example.comz"),
     Contact("3", Some(""), Some(""), Some(""), "joe@example2.com"),
     Contact("5", Some("Joe"), Some("Blow"), Some("123-456-7890"), "joe@example.com"),

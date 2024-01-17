@@ -1,6 +1,6 @@
 package com.github.zalbia.zhhs.web.templates
 
-import com.github.zalbia.zhhs.domain.Contact
+import com.github.zalbia.zhhs.domain.{Contact, UpdateContactDto}
 import com.github.zalbia.zhhs.web.templates.EditContactFormData.ErrorField
 
 final case class EditContactFormData(
@@ -13,6 +13,15 @@ final case class EditContactFormData(
 ) {
   def addError(errorString: String): EditContactFormData =
     copy(errors = errors + (ErrorField.Email -> errorString))
+
+  def toUpdateContactDto: UpdateContactDto =
+    UpdateContactDto(
+      contactId = id,
+      firstname = firstname,
+      lastname = lastname,
+      phone = phone,
+      email = email,
+    )
 }
 
 object EditContactFormData {
