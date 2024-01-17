@@ -27,6 +27,16 @@ private[web] object ContactController {
       }
     }
 
+  val contactView: Handler[ContactService, Nothing, (String, Request), Response] =
+    Handler.fromFunctionZIO { case (contactId, _) =>
+      ZIO.serviceWithZIO[ContactService](_.find(contactId)).map {
+        case Some(contact) =>
+          Response.html(ShowContactTemplate(contact))
+        case None          =>
+          Response.notFound(s"Contact with ID '$contactId' not found")
+      }
+    }
+
   val contactsCount: Handler[ContactService, Nothing, Request, Response] =
     Handler.responseZIO {
       ZIO.serviceWithZIO[ContactService](_.count).map(count => Response.text(s"($count total contacts)"))
