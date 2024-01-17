@@ -10,127 +10,113 @@ import zio.durationInt
 
 private[web] object ContactController {
   lazy val contactRoutes: Routes[ContactService, Nothing] = Routes(
-    Method.GET / ""                                 -> Response.redirect(URL.root / "contacts").toHandler,
-    Method.GET / "contacts"                         -> ContactController.contacts,
-    Method.DELETE / "contacts"                      -> ContactController.contactsDelete,
-    Method.GET / "contacts" / "count"               -> ContactController.contactsCount,
-    Method.GET / "contacts" / "new"                 -> ContactController.contactsNew,
-    Method.POST / "contacts" / "new"                -> ContactController.contactsNewPost,
-    Method.GET / "contacts" / string("id")          -> ContactController.contactsView,
-    Method.DELETE / "contacts" / string("id")       -> ContactController.contactsIdDelete,
-    Method.GET / "contacts" / string("id") / "edit" -> ContactController.contactsIdEdit,
-  )
-
-  private val contacts: Handler[ContactService, Nothing, Request, Response] =
-    Handler.fromFunctionZIO { (request: Request) =>
-      val search = request.url.queryParams.get("q")
-      val page   = request.url.queryParams.get("page").map(_.toInt).getOrElse(1) // unsafe!
-      for {
-        contactService <- ZIO.service[ContactService]
-        contactsFound  <- search match {
-                            case None => contactService.all
-                            case _    => contactService.search(search, page)
-                          }
-      } yield {
-        if (request.headers.get("HX-Trigger").contains("search"))
-          Response.html(RowsTemplate(contactsFound))
-        else
-          Response.html(IndexTemplate(search, contactsFound, request.flashMessage))
-      }
-    }
-
-  private val contactsView: Handler[ContactService, Nothing, (String, Request), Response] =
-    Handler.fromFunctionZIO { case (contactId, _) =>
-      ZIO.serviceWithZIO[ContactService](_.find(contactId)).map {
-        case Some(contact) =>
-          Response.html(ShowContactTemplate(contact))
-        case None          =>
-          Response.notFound(s"Contact with ID '$contactId' not found")
-      }
-    }
-
-  private val contactsNew: Handler[Any, Nothing, Any, Response] = Handler.html(NewContactTemplate(NewContactFormData.empty))
-
-  private val contactsIdEdit: Handler[ContactService, Nothing, (String, Request), Response] =
-    Handler.fromFunctionZIO { case (contactId, _) =>
-      ZIO
-        .serviceWithZIO[ContactService](_.find(contactId))
-        .map {
+    Method.GET / ""                                 ->
+      Response.redirect(URL.root / "contacts").toHandler,
+    Method.GET / "contacts"                         ->
+      Handler.fromFunctionZIO { (request: Request) =>
+        val search = request.url.queryParams.get("q")
+        val page   = request.url.queryParams.get("page").map(_.toInt).getOrElse(1) // unsafe!
+        for {
+          contactService <- ZIO.service[ContactService]
+          contactsFound  <- search match {
+                              case None => contactService.all
+                              case _    => contactService.search(search, page)
+                            }
+        } yield {
+          if (request.headers.get("HX-Trigger").contains("search"))
+            Response.html(RowsTemplate(contactsFound))
+          else
+            Response.html(IndexTemplate(search, contactsFound, request.flashMessage))
+        }
+      },
+    Method.DELETE / "contacts"                      ->
+      Handler.fromFunctionZIO { (request: Request) =>
+        for {
+          contactService <- ZIO.service[ContactService]
+          selectedIds    <- request.body.asURLEncodedForm.orDie
+                              .map(_.formData.collect { case FormField.Simple("selected_contact_ids", value) => value })
+          contactIds      = selectedIds.map(_.split(',')).flatten.toSet
+          _              <- contactService.deleteAll(contactIds)
+        } yield Response
+          .seeOther(URL.root / "contacts")
+          .addCookie(
+            Cookie.Response(
+              name = "zio-http-flash",
+              content = "Deleted Contacts",
+              maxAge = Some(5.seconds),
+            )
+          )
+      },
+    Method.GET / "contacts" / "count"               ->
+      Handler.responseZIO {
+        contactService(_.count).map(count => Response.text(s"($count total contacts)"))
+      },
+    Method.GET / "contacts" / "new"                 ->
+      Handler.html(NewContactTemplate(NewContactFormData.empty)),
+    Method.POST / "contacts" / "new"                ->
+      Handler.fromFunctionZIO { (request: Request) =>
+        request.body.asURLEncodedForm.foldZIO(
+          _ => ZIO.succeed(Response.error(Status.BadRequest, "Contact form data could not be parsed from the request")),
+          form => {
+            val contactFormData = parseContactFormData(form)
+            saveNewContact(form).catchAll {
+              case EmailAlreadyExistsError(email)     =>
+                val formDataWithError = contactFormData.addError(s"""Email "$email" already exists""")
+                ZIO.succeed(Response.html(NewContactTemplate(formDataWithError)))
+              case SaveContactError.MissingEmailError =>
+                val formDataWithError = contactFormData.addError(s"An email is required")
+                ZIO.succeed(Response.html(NewContactTemplate(formDataWithError)))
+            }
+          },
+        )
+      },
+    Method.GET / "contacts" / string("id")          ->
+      Handler.fromFunctionZIO[(String, Request)] { case (contactId, _) =>
+        contactService(_.find(contactId)).map {
           case Some(contact) =>
-            Response.html(EditContactTemplate(EditContactFormData.from(contact)))
+            Response.html(ShowContactTemplate(contact))
           case None          =>
             Response.notFound(s"Contact with ID '$contactId' not found")
         }
-    }
-
-  private val contactsCount: Handler[ContactService, Nothing, Request, Response] =
-    Handler.responseZIO {
-      ZIO.serviceWithZIO[ContactService](_.count).map(count => Response.text(s"($count total contacts)"))
-    }
-
-  private val contactsIdDelete: Handler[ContactService, Nothing, (String, Request), Response] =
-    Handler.fromFunctionZIO { case (contactId, request) =>
-      ZIO
-        .serviceWithZIO[ContactService](_.delete(contactId))
-        .as(
-          if (request.headers.get("HX-Trigger").contains("delete-btn"))
-            Response(status = Status.SeeOther, headers = Headers(Header.Location(URL.root / "contacts")))
-              .addCookie(
-                Cookie.Response(
-                  name = "zio-http-flash",
-                  content = "Deleted Contact!",
-                  maxAge = Some(5.seconds),
+      },
+    Method.DELETE / "contacts" / string("id")       ->
+      Handler.fromFunctionZIO[(String, Request)] { case (contactId, request) =>
+        contactService(_.delete(contactId))
+          .as(
+            if (request.headers.get("HX-Trigger").contains("delete-btn"))
+              Response(status = Status.SeeOther, headers = Headers(Header.Location(URL.root / "contacts")))
+                .addCookie(
+                  Cookie.Response(
+                    name = "zio-http-flash",
+                    content = "Deleted Contact!",
+                    maxAge = Some(5.seconds),
+                  )
                 )
+            else
+              Response.text("")
+          )
+          .catchAll(e =>
+            ZIO.succeed(
+              Response.error(
+                Status.BadRequest,
+                s"Contact with id '${e.contactId}' doesn't exist'",
               )
-          else
-            Response.text("")
-        )
-        .catchAll(e =>
-          ZIO.succeed(
-            Response.error(
-              Status.BadRequest,
-              s"Contact with id '${e.contactId}' doesn't exist'",
             )
           )
-        )
-    }
-
-  private val contactsDelete: Handler[ContactService, Nothing, Request, Response] =
-    Handler.fromFunctionZIO { (request: Request) =>
-      for {
-        contactService <- ZIO.service[ContactService]
-        selectedIds    <- request.body.asURLEncodedForm.orDie
-                            .map(_.formData.collect { case FormField.Simple("selected_contact_ids", value) => value })
-        contactIds      = selectedIds.map(_.split(',')).flatten.toSet
-        _              <- contactService.deleteAll(contactIds)
-      } yield Response
-        .seeOther(URL.root / "contacts")
-        .addCookie(
-          Cookie.Response(
-            name = "zio-http-flash",
-            content = "Deleted Contacts",
-            maxAge = Some(5.seconds),
-          )
-        )
-    }
-
-  private val contactsNewPost: Handler[ContactService, Nothing, Request, Response] =
-    Handler.fromFunctionZIO { (request: Request) =>
-      request.body.asURLEncodedForm.foldZIO(
-        _ => ZIO.succeed(Response.error(Status.BadRequest, "Contact form data could not be parsed from the request")),
-        form => {
-          val contactFormData = parseContactFormData(form)
-          saveNewContact(form).catchAll {
-            case EmailAlreadyExistsError(email)     =>
-              val formDataWithError = contactFormData.addError(s"""Email "$email" already exists""")
-              ZIO.succeed(Response.html(NewContactTemplate(formDataWithError)))
-            case SaveContactError.MissingEmailError =>
-              val formDataWithError = contactFormData.addError(s"An email is required")
-              ZIO.succeed(Response.html(NewContactTemplate(formDataWithError)))
+      },
+    Method.GET / "contacts" / string("id") / "edit" ->
+      Handler.fromFunctionZIO[(String, Request)] { case (contactId, _) =>
+        contactService(_.find(contactId))
+          .map {
+            case Some(contact) =>
+              Response.html(EditContactTemplate(EditContactFormData.from(contact)))
+            case None          =>
+              Response.notFound(s"Contact with ID '$contactId' not found")
           }
-        },
-      )
-    }
+      },
+  )
+
+  private lazy val contactService = ZIO.serviceWithZIO[ContactService]
 
   private def saveNewContact(form: Form) = {
     val formData = NewContactFormData(
@@ -139,8 +125,7 @@ private[web] object ContactController {
       phone = form.get("phone").flatMap(_.stringValue),
       email = form.get("email").flatMap(_.stringValue),
     )
-    ZIO
-      .serviceWithZIO[ContactService](_.save(formData.toNewContact))
+    contactService(_.save(formData.toNewContact))
       .as(
         Response
           .seeOther(URL.root / "contacts")
