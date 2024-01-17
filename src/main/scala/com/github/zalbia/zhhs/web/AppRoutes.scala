@@ -15,11 +15,11 @@ object AppRoutes {
     Routes(
       Method.GET / ""                           -> Response.redirect(URL.root / "contacts").toHandler,
       Method.GET / "contacts"                   -> ContactController.contacts,
+      Method.DELETE / "contacts"                -> ContactController.contactsDelete,
       Method.GET / "contacts" / "count"         -> ContactController.contactsCount,
       Method.GET / "contacts" / "new"           -> Handler.html(NewContactTemplate(ContactFormData.empty)),
       Method.POST / "contacts" / "new"          -> ContactController.contactsNewPost,
       Method.GET / "contacts" / string("id")    -> ContactController.contactView,
       Method.DELETE / "contacts" / string("id") -> ContactController.contactDelete,
-      Method.DELETE / "contacts"                -> ContactController.contactsDelete,
     ).toHttpApp @@ cors(corsConfig) @@ staticPath
 }

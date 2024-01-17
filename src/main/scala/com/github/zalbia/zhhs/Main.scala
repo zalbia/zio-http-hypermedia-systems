@@ -57,7 +57,7 @@ object Main extends ZIOAppDefault {
     ) >>> Server.live
   }
 
-  type AppEnv =
+  private type AppEnv =
     Environment &
       ZIOAppArgs &
       Scope
