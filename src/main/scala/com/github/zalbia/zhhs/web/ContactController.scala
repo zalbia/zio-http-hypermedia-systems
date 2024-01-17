@@ -17,11 +17,10 @@ private[web] object ContactController {
         val search = request.url.queryParams.get("q")
         val page   = request.url.queryParams.get("page").map(_.toInt).getOrElse(1) // unsafe!
         for {
-          contactService <- ZIO.service[ContactService]
-          contactsFound  <- search match {
-                              case None => contactService.all
-                              case _    => contactService.search(search, page)
-                            }
+          contactsFound <- search match {
+                             case None => contactService(_.all)
+                             case _    => contactService(_.search(search, page))
+                           }
         } yield {
           if (request.headers.get("HX-Trigger").contains("search"))
             Response.html(RowsTemplate(contactsFound))
@@ -32,11 +31,10 @@ private[web] object ContactController {
     Method.DELETE / "contacts"                       ->
       Handler.fromFunctionZIO { (request: Request) =>
         for {
-          contactService <- ZIO.service[ContactService]
-          selectedIds    <- request.body.asURLEncodedForm.orDie
-                              .map(_.formData.collect { case FormField.Simple("selected_contact_ids", value) => value })
-          contactIds      = selectedIds.map(_.split(',')).flatten.toSet
-          _              <- contactService.deleteAll(contactIds)
+          selectedIds <- request.body.asURLEncodedForm.orDie
+                           .map(_.formData.collect { case FormField.Simple("selected_contact_ids", value) => value })
+          contactIds   = selectedIds.map(_.split(',')).flatten.toSet
+          _           <- contactService(_.deleteAll(contactIds))
         } yield Response
           .seeOther(URL.root / "contacts")
           .addCookie(
