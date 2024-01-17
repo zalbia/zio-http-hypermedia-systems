@@ -2,8 +2,8 @@ package com.github.zalbia.zhhs.domain
 
 import com.github.zalbia.zhhs.Settings
 import com.github.zalbia.zhhs.domain.SaveContactError.{EmailAlreadyExistsError, MissingEmailError}
-import com.github.zalbia.zhhs.web.templates.ContactFormData
 import zio.*
+
 trait ContactService {
   def all: UIO[List[Contact]]
 
@@ -14,8 +14,7 @@ trait ContactService {
   def deleteAll(contactIds: Set[String]): UIO[Unit]
 
   def find(contactId: String): UIO[Option[Contact]]
-
-  def save(contact: ContactFormData): IO[SaveContactError, Unit]
+  def save(newContact: NewContactDto): IO[SaveContactError, Unit]
 
   def search(query: Option[String], page: Int): UIO[List[Contact]]
 }
@@ -47,7 +46,7 @@ object ContactService {
         override def find(contactId: String): UIO[Option[Contact]] =
           contactsRef.get.map(_.find(_.id == contactId))
 
-        override def save(contact: ContactFormData): IO[SaveContactError, Unit] =
+        override def save(contact: NewContactDto): IO[SaveContactError, Unit] =
           for {
             email     <- validateEmail(contact)
             id        <- nextId
@@ -55,7 +54,7 @@ object ContactService {
             _         <- contactsRef.update(_ :+ newContact)
           } yield ()
 
-        private def validateEmail(form: ContactFormData) =
+        private def validateEmail(form: NewContactDto) =
           form.email match {
             case Some(email) =>
               val trimmedEmail = email.trim

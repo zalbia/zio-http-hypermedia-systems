@@ -1,13 +1,13 @@
 package com.github.zalbia.zhhs.web.templates
 
-import com.github.zalbia.zhhs.web.templates.ContactFormData.ErrorField
+import com.github.zalbia.zhhs.web.templates.NewContactFormData.ErrorField
 import zio.http.template.*
 
 object NewContactTemplate {
-  def apply(contactFormData: ContactFormData): Html =
+  def apply(contactFormData: NewContactFormData): Html =
     LayoutTemplate.noFlashedMessages(newContactForm(contactFormData) ++ p(a(hrefAttr := "/contacts", "Back")))
 
-  private def newContactForm(contactFormData: ContactFormData): Html =
+  private def newContactForm(contactFormData: NewContactFormData): Html =
     form(
       actionAttr := "/contacts/new",
       methodAttr := "post",
