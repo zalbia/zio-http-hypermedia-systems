@@ -57,10 +57,10 @@ private[web] object ContactController {
           _ => ZIO.succeed(Response.error(Status.BadRequest, "Contact form data could not be parsed from the request")),
           form => {
             val contactFormData = NewContactFormData(
-              firstname = form.get("first_name").flatMap(_.stringValue),
-              lastname = form.get("last_name").flatMap(_.stringValue),
-              phone = form.get("phone").flatMap(_.stringValue),
-              email = form.get("email").flatMap(_.stringValue),
+              firstname = trimEmptyAsNone(form.get("first_name")),
+              lastname = trimEmptyAsNone(form.get("last_name")),
+              phone = trimEmptyAsNone(form.get("phone")),
+              email = trimEmptyAsNone(form.get("email")),
             )
             contactService(_.save(contactFormData.toNewContact))
               .as(
@@ -136,10 +136,10 @@ private[web] object ContactController {
           form => {
             val contactFormData = EditContactFormData(
               id = contactId,
-              firstname = form.get("first_name").flatMap(_.stringValue),
-              lastname = form.get("last_name").flatMap(_.stringValue),
-              phone = form.get("phone").flatMap(_.stringValue),
-              email = form.get("email").flatMap(_.stringValue),
+              firstname = trimEmptyAsNone(form.get("first_name")),
+              lastname = trimEmptyAsNone(form.get("last_name")),
+              phone = trimEmptyAsNone(form.get("phone")),
+              email = trimEmptyAsNone(form.get("email")),
             )
             contactService(_.update(contactFormData.toUpdateContactDto))
               .as(
@@ -167,6 +167,9 @@ private[web] object ContactController {
         )
       },
   )
+
+  private def trimEmptyAsNone(formField: Option[FormField]) =
+    formField.flatMap(_.stringValue.flatMap(s => if (s.trim.isEmpty) None else Some(s.trim)))
 
   private lazy val contactService = ZIO.serviceWithZIO[ContactService]
 }

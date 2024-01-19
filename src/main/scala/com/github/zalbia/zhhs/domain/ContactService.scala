@@ -52,30 +52,25 @@ object ContactService {
           contactsRef
             .modify { contacts =>
               newContactDto.email match {
-                case Some(email) =>
-                  val trimmedEmail = email.trim
-                  if (trimmedEmail.isEmpty)
-                    (Some(MissingEmailError), contacts)
-                  else {
-                    val emailAlreadyExists = contacts.exists(contact => trimmedEmail == contact.email)
-                    if (emailAlreadyExists)
-                      (Some(EmailAlreadyExistsError(email)), contacts)
-                    else {
-                      // Generates IDs by getting the max ID number + 1. Unsafe use of toInt!!!
-                      // We're getting away with it as the preloaded ID's are numbers by convention.
-                      val nextId     = (contacts.map(_.id.toInt).max + 1).toString
-                      val newContact = Contact(
-                        id = nextId,
-                        firstname = newContactDto.firstname,
-                        lastname = newContactDto.lastname,
-                        phone = newContactDto.phone,
-                        email = trimmedEmail,
-                      )
-                      (None, contacts :+ newContact)
-                    }
-                  }
                 case None        =>
                   (Some(MissingEmailError), contacts)
+                case Some(email) =>
+                  val emailAlreadyExists = contacts.exists(contact => email == contact.email)
+                  if (emailAlreadyExists)
+                    (Some(EmailAlreadyExistsError(email)), contacts)
+                  else {
+                    // Generates IDs by getting the max ID number + 1. Unsafe use of toInt!!!
+                    // We're getting away with it as the preloaded ID's are numbers by convention.
+                    val nextId     = (contacts.map(_.id.toInt).max + 1).toString
+                    val newContact = Contact(
+                      id = nextId,
+                      firstname = newContactDto.firstname,
+                      lastname = newContactDto.lastname,
+                      phone = newContactDto.phone,
+                      email = email,
+                    )
+                    (None, contacts :+ newContact)
+                  }
               }
             }
             .flatMap(ZIO.fromOption(_).flip)
@@ -91,26 +86,21 @@ object ContactService {
                 case (_, None)                              =>
                   (Some(MissingEmailError), contacts)
                 case (Some(oldContact), Some(updatedEmail)) =>
-                  val trimmedEmail = updatedEmail.trim
-                  if (trimmedEmail.isEmpty)
-                    (Some(MissingEmailError), contacts)
+                  val emailAlreadyExists = contacts.exists(contact => updatedEmail == contact.email)
+                  val emailChanged       = oldContact.email != updatedEmail
+                  if (emailChanged && emailAlreadyExists)
+                    (Some(EmailAlreadyExistsError(updatedEmail)), contacts)
                   else {
-                    val emailAlreadyExists = contacts.exists(contact => trimmedEmail == contact.email)
-                    val emailChanged       = oldContact.email != updatedEmail
-                    if (emailChanged && emailAlreadyExists)
-                      (Some(EmailAlreadyExistsError(updatedEmail)), contacts)
-                    else {
-                      val updatedContact = Contact(
-                        id = update.contactId,
-                        firstname = update.firstname,
-                        lastname = update.lastname,
-                        phone = update.phone,
-                        email = updatedEmail,
-                      )
+                    val updatedContact = Contact(
+                      id = update.contactId,
+                      firstname = update.firstname,
+                      lastname = update.lastname,
+                      phone = update.phone,
+                      email = updatedEmail,
+                    )
 
-                      val updateIndex = contacts.indexWhere(_.id == updatedContact.id)
-                      (None, contacts.updated(updateIndex, updatedContact))
-                    }
+                    val updateIndex = contacts.indexWhere(_.id == updatedContact.id)
+                    (None, contacts.updated(updateIndex, updatedContact))
                   }
               }
             }

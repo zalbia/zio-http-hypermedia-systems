@@ -76,7 +76,7 @@ object EditContactTemplate {
       hxAttr("push-url") := "true",
       hxAttr("confirm")  := "Are you sure you want to delete this contact?",
       hxAttr("target")   := "body",
-      "Delete Button",
+      "Delete Contact",
     )
 
   private lazy val backLink: Html =
