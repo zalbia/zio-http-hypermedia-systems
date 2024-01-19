@@ -1,6 +1,5 @@
 package com.github.zalbia.zhhs.web
 
-import com.github.zalbia.zhhs.Settings
 import com.github.zalbia.zhhs.domain.ContactServiceError.*
 import com.github.zalbia.zhhs.domain.*
 import com.github.zalbia.zhhs.web.templates.*
@@ -56,24 +55,9 @@ private[web] object ContactController {
         request.body.asURLEncodedForm.foldZIO(
           _ => ZIO.succeed(Response.error(Status.BadRequest, "Contact form data could not be parsed from the request")),
           form => {
-            val contactFormData = NewContactFormData(
-              firstname = trimEmptyAsNone(form.get("first_name")),
-              lastname = trimEmptyAsNone(form.get("last_name")),
-              phone = trimEmptyAsNone(form.get("phone")),
-              email = trimEmptyAsNone(form.get("email")),
-            )
+            val contactFormData = NewContactFormData.fromForm(form)
             contactService(_.save(contactFormData.toNewContact))
-              .as(
-                Response
-                  .seeOther(URL.root / "contacts")
-                  .addCookie(
-                    Cookie.Response(
-                      name = "zio-http-flash",
-                      content = "Created New Contact",
-                      maxAge = Some(Settings.flashMessageMaxAge),
-                    )
-                  )
-              )
+              .as(Response.seeOther(URL.root / "contacts").addFlashMessage("Created New Contact"))
               .catchAll {
                 case EmailAlreadyExistsError(email) =>
                   val formDataWithError = contactFormData.addError(s"""Email "$email" already exists""")
@@ -124,7 +108,7 @@ private[web] object ContactController {
         contactService(_.find(contactId))
           .map {
             case Some(contact) =>
-              Response.html(EditContactTemplate(EditContactFormData.from(contact)))
+              Response.html(EditContactTemplate(EditContactFormData.fromContact(contact)))
             case None          =>
               Response.notFound(s"Contact with ID '$contactId' not found")
           }
@@ -134,25 +118,9 @@ private[web] object ContactController {
         request.body.asURLEncodedForm.foldZIO(
           _ => ZIO.succeed(Response.error(Status.BadRequest, "Contact form data could not be parsed from the request")),
           form => {
-            val contactFormData = EditContactFormData(
-              id = contactId,
-              firstname = trimEmptyAsNone(form.get("first_name")),
-              lastname = trimEmptyAsNone(form.get("last_name")),
-              phone = trimEmptyAsNone(form.get("phone")),
-              email = trimEmptyAsNone(form.get("email")),
-            )
+            val contactFormData = EditContactFormData.fromForm(contactId, form)
             contactService(_.update(contactFormData.toUpdateContactDto))
-              .as(
-                Response
-                  .seeOther(URL.root / "contacts" / contactId)
-                  .addCookie(
-                    Cookie.Response(
-                      name = "zio-http-flash",
-                      content = "Contact Updated",
-                      maxAge = Some(Settings.flashMessageMaxAge),
-                    )
-                  )
-              )
+              .as(Response.seeOther(URL.root / "contacts" / contactId).addFlashMessage("Contact Updated"))
               .catchAll {
                 case ContactIdDoesNotExist(contactId) =>
                   ZIO.succeed(Response.notFound(s"Contact with id '$contactId' doesn't exist'"))
@@ -168,8 +136,7 @@ private[web] object ContactController {
       },
   )
 
-  private def trimEmptyAsNone(formField: Option[FormField]) =
-    formField.flatMap(_.stringValue.flatMap(s => if (s.trim.isEmpty) None else Some(s.trim)))
+  
 
   private lazy val contactService = ZIO.serviceWithZIO[ContactService]
 }

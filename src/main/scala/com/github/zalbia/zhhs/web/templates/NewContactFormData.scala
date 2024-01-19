@@ -2,6 +2,7 @@ package com.github.zalbia.zhhs.web.templates
 
 import com.github.zalbia.zhhs.domain.NewContactDto
 import com.github.zalbia.zhhs.web.templates.NewContactFormData.ErrorField
+import zio.http.Form
 
 final case class NewContactFormData(
   firstname: Option[String],
@@ -18,6 +19,14 @@ final case class NewContactFormData(
 }
 
 object NewContactFormData {
+  def fromForm(form: Form): NewContactFormData =
+    NewContactFormData(
+      firstname = trimEmptyAsNone(form.get("first_name").flatMap(_.stringValue)),
+      lastname = trimEmptyAsNone(form.get("last_name").flatMap(_.stringValue)),
+      phone = trimEmptyAsNone(form.get("phone").flatMap(_.stringValue)),
+      email = trimEmptyAsNone(form.get("email").flatMap(_.stringValue)),
+    )
+
   val empty: NewContactFormData = NewContactFormData(None, None, None, None, Map.empty)
 
   sealed trait ErrorField
