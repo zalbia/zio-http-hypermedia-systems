@@ -14,11 +14,13 @@ trait ContactService {
   def deleteAll(contactIds: Set[String]): UIO[Unit]
 
   def find(contactId: String): UIO[Option[Contact]]
-  def save(newContact: NewContactDto): IO[SaveContactError, Unit]
 
+  def save(newContact: NewContactDto): IO[SaveContactError, Unit]
   def search(query: Option[String], page: Int): UIO[List[Contact]]
 
   def update(updateContact: UpdateContactDto): IO[UpdateContactError, Unit]
+
+  def validateEmail(contactId: String, email: Option[String]): UIO[Option[UpdateContactError]]
 }
 
 object ContactService {
@@ -79,37 +81,6 @@ object ContactService {
             .flatMap(ZIO.fromOption(_).flip)
             .unit
 
-        override def update(update: UpdateContactDto): IO[UpdateContactError, Unit] =
-          contactsRef
-            .modify { contacts =>
-              val oldContact = contacts.find(_.id == update.contactId)
-              (oldContact, update.email) match {
-                case (None, _)                              =>
-                  (Some(ContactIdDoesNotExist(update.contactId)), contacts)
-                case (_, None)                              =>
-                  (Some(MissingEmailError), contacts)
-                case (Some(oldContact), Some(updatedEmail)) =>
-                  val emailAlreadyExists = contacts.exists(contact => updatedEmail == contact.email)
-                  val emailChanged       = oldContact.email != updatedEmail
-                  if (emailChanged && emailAlreadyExists)
-                    (Some(EmailAlreadyExistsError(updatedEmail)), contacts)
-                  else {
-                    val updatedContact = Contact(
-                      id = update.contactId,
-                      firstname = update.firstname,
-                      lastname = update.lastname,
-                      phone = update.phone,
-                      email = updatedEmail,
-                    )
-
-                    val updateIndex = contacts.indexWhere(_.id == updatedContact.id)
-                    (None, contacts.updated(updateIndex, updatedContact))
-                  }
-              }
-            }
-            .flatMap(ZIO.fromOption(_).flip)
-            .unit
-
         override def search(query: Option[String], page: Int): UIO[List[Contact]] = {
           val pageStart = (page - 1) * Settings.pageSize
           val pageEnd   = pageStart + Settings.pageSize
@@ -128,6 +99,55 @@ object ContactService {
               .slice(pageStart, pageEnd)
               .toList
           }
+        }
+
+        override def update(update: UpdateContactDto): IO[UpdateContactError, Unit] =
+          contactsRef
+            .modify { contacts =>
+              val oldContact = contacts.find(_.id == update.contactId)
+              (oldContact, update.email) match {
+                case (None, _)                       =>
+                  (Some(ContactIdDoesNotExist(update.contactId)), contacts)
+                case (_, None)                       =>
+                  (Some(MissingEmailError), contacts)
+                case (Some(oldContact), Some(email)) =>
+                  val emailAlreadyExists = contacts.exists(contact => email == contact.email)
+                  val emailChanged       = oldContact.email != email
+                  if (emailChanged && emailAlreadyExists)
+                    (Some(EmailAlreadyExistsError(email)), contacts)
+                  else {
+                    val updatedContact = Contact(
+                      id = update.contactId,
+                      firstname = update.firstname,
+                      lastname = update.lastname,
+                      phone = update.phone,
+                      email = email,
+                    )
+
+                    val updateIndex = contacts.indexWhere(_.id == updatedContact.id)
+                    (None, contacts.updated(updateIndex, updatedContact))
+                  }
+              }
+            }
+            .flatMap(ZIO.fromOption(_).flip)
+            .unit
+
+        override def validateEmail(contactId: String, email: Option[String]): UIO[Option[UpdateContactError]] = {
+          def validateEmail_(contactId: String, contacts: Chunk[Contact], email: Option[String]) = {
+            val oldContact = contacts.find(_.id == contactId)
+            (oldContact, email) match {
+              case (None, _)                       =>
+                Some(ContactIdDoesNotExist(contactId))
+              case (_, None)                       =>
+                Some(MissingEmailError)
+              case (Some(oldContact), Some(email)) =>
+                val emailAlreadyExists = contacts.exists(contact => email == contact.email)
+                val emailChanged       = oldContact.email != email
+                Option.when(emailChanged && emailAlreadyExists)(EmailAlreadyExistsError(email))
+            }
+          }
+
+          contactsRef.get.map(validateEmail_(contactId, _, email))
         }
       }
     })

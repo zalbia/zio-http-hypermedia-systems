@@ -36,9 +36,7 @@ private[web] object ContactController {
         } yield Response.seeOther(URL.root / "contacts").addExpiringFlashMessage("Deleted Contacts")
       },
     Method.GET / "contacts" / "count"                ->
-      Handler.responseZIO {
-        contactService(_.count).map(count => Response.text(s"($count total contacts)"))
-      },
+      Handler.responseZIO(contactService(_.count).map(count => Response.text(s"($count total contacts)"))),
     Method.GET / "contacts" / "new"                  ->
       Handler.html(NewContactTemplate(NewContactFormData.empty)),
     Method.POST / "contacts" / "new"                 ->
@@ -80,12 +78,7 @@ private[web] object ContactController {
               Response.text("")
           )
           .catchAll { case ContactIdDoesNotExist(contactId) =>
-            ZIO.succeed(
-              Response.error(
-                Status.BadRequest,
-                s"Contact with id '$contactId' doesn't exist'",
-              )
-            )
+            ZIO.succeed(Response.error(Status.BadRequest, s"Contact with id '$contactId' doesn't exist'"))
           }
       },
     Method.GET / "contacts" / string("id") / "edit"  ->
@@ -113,11 +106,25 @@ private[web] object ContactController {
                   val formDataWithError = contactFormData.addError(s"""Email "$email" already exists""")
                   ZIO.succeed(Response.html(EditContactTemplate(formDataWithError)))
                 case MissingEmailError                =>
-                  val formDataWithError = contactFormData.addError(s"An email is required")
+                  val formDataWithError = contactFormData.addError("An email is required")
                   ZIO.succeed(Response.html(EditContactTemplate(formDataWithError)))
               }
           },
         )
+      },
+    Method.GET / "contacts" / string("id") / "email" ->
+      Handler.fromFunctionZIO[(String, Request)] { case (contactId, request) =>
+        val email = trimEmptyAsNone(request.url.queryParams.get("email"))
+        contactService(_.validateEmail(contactId, email)).map {
+          case Some(ContactIdDoesNotExist(contactId)) =>
+            Response.notFound(s"Contact with id '$contactId' doesn't exist'")
+          case Some(EmailAlreadyExistsError(email))   =>
+            Response.text(s"""Email "$email" already exists""")
+          case Some(MissingEmailError)                =>
+            Response.text("An email is required")
+          case None                                   =>
+            Response.text("")
+        }
       },
   )
 
