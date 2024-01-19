@@ -5,7 +5,10 @@ import zio.http.{Cookie, Response}
 
 package object web {
   implicit final class CookieResponseOps(private val response: Response) extends AnyVal {
-    def addFlashMessage(message: String, maxAge: Option[Duration] = Some(Settings.flashMessageMaxAge)): Response =
+    def addExpiringFlashMessage(
+      message: String,
+      maxAge: Option[Duration] = Some(Settings.flashMessageMaxAge),
+    ): Response =
       response.addCookie(
         Cookie.Response(
           name = "zio-http-flash",

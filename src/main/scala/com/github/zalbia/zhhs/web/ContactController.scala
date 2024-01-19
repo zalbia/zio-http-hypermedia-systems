@@ -5,7 +5,6 @@ import com.github.zalbia.zhhs.domain.*
 import com.github.zalbia.zhhs.web.templates.*
 import zio.ZIO
 import zio.http.*
-import zio.durationInt
 
 private[web] object ContactController {
   lazy val contactRoutes: Routes[ContactService, Nothing] = Routes(
@@ -17,7 +16,7 @@ private[web] object ContactController {
         val page   = request.url.queryParams.get("page").map(_.toInt).getOrElse(1) // unsafe!
         for {
           contactsFound <- search match {
-                             case None => contactService(_.all)
+                             case None => contactService(_.all(page))
                              case _    => contactService(_.search(search, page))
                            }
         } yield {
@@ -34,15 +33,7 @@ private[web] object ContactController {
                            .map(_.formData.collect { case FormField.Simple("selected_contact_ids", value) => value })
           contactIds   = selectedIds.map(_.split(',')).flatten.toSet
           _           <- contactService(_.deleteAll(contactIds))
-        } yield Response
-          .seeOther(URL.root / "contacts")
-          .addCookie(
-            Cookie.Response(
-              name = "zio-http-flash",
-              content = "Deleted Contacts",
-              maxAge = Some(5.seconds),
-            )
-          )
+        } yield Response.seeOther(URL.root / "contacts").addExpiringFlashMessage("Deleted Contacts")
       },
     Method.GET / "contacts" / "count"                ->
       Handler.responseZIO {
@@ -57,7 +48,7 @@ private[web] object ContactController {
           form => {
             val contactFormData = NewContactFormData.fromForm(form)
             contactService(_.save(contactFormData.toNewContact))
-              .as(Response.seeOther(URL.root / "contacts").addFlashMessage("Created New Contact"))
+              .as(Response.seeOther(URL.root / "contacts").addExpiringFlashMessage("Created New Contact"))
               .catchAll {
                 case EmailAlreadyExistsError(email) =>
                   val formDataWithError = contactFormData.addError(s"""Email "$email" already exists""")
@@ -84,13 +75,7 @@ private[web] object ContactController {
           .as(
             if (request.headers.get("HX-Trigger").contains("delete-btn"))
               Response(status = Status.SeeOther, headers = Headers(Header.Location(URL.root / "contacts")))
-                .addCookie(
-                  Cookie.Response(
-                    name = "zio-http-flash",
-                    content = "Deleted Contact!",
-                    maxAge = Some(5.seconds),
-                  )
-                )
+                .addExpiringFlashMessage("Deleted Contact")
             else
               Response.text("")
           )
@@ -120,7 +105,7 @@ private[web] object ContactController {
           form => {
             val contactFormData = EditContactFormData.fromForm(contactId, form)
             contactService(_.update(contactFormData.toUpdateContactDto))
-              .as(Response.seeOther(URL.root / "contacts" / contactId).addFlashMessage("Contact Updated"))
+              .as(Response.seeOther(URL.root / "contacts" / contactId).addExpiringFlashMessage("Contact Updated"))
               .catchAll {
                 case ContactIdDoesNotExist(contactId) =>
                   ZIO.succeed(Response.notFound(s"Contact with id '$contactId' doesn't exist'"))
@@ -135,8 +120,6 @@ private[web] object ContactController {
         )
       },
   )
-
-  
 
   private lazy val contactService = ZIO.serviceWithZIO[ContactService]
 }

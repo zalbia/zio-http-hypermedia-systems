@@ -5,7 +5,7 @@ import com.github.zalbia.zhhs.domain.ContactServiceError.*
 import zio.*
 
 trait ContactService {
-  def all: UIO[List[Contact]]
+  def all(page: Int): UIO[List[Contact]]
 
   def count: UIO[Int]
 
@@ -25,8 +25,11 @@ object ContactService {
   def live: ULayer[ContactService] =
     ZLayer.fromZIO(Ref.make(preloadedContacts).map { contactsRef =>
       new ContactService {
-        override def all: UIO[List[Contact]] =
-          contactsRef.get.map(_.take(Settings.pageSize).toList)
+        override def all(page: Int): UIO[List[Contact]] = {
+          val pageStart = (page - 1) * Settings.pageSize
+          val pageEnd   = pageStart + Settings.pageSize
+          contactsRef.get.map(_.take(Settings.pageSize).slice(pageStart, pageEnd).toList)
+        }
 
         override def count: UIO[Int] =
           contactsRef.get.map(_.length)
