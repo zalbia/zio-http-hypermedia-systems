@@ -131,7 +131,7 @@ object ContactService {
 
   private val preloadedContacts = Chunk(
     Contact("2", Some("Carson"), Some("Gross"), Some("123-456-7890"), "carson@example.comz"),
-    Contact("3", Some(""), Some(""), Some(""), "joe@example2.com"),
+    Contact("3", None, None, None, "joe@example2.com"),
     Contact("5", Some("Joe"), Some("Blow"), Some("123-456-7890"), "joe@example.com"),
     Contact("6", Some("Joe"), Some("Blow"), Some("123-456-7890"), "joe1@example.com"),
     Contact("7", Some("Joe"), Some("Blow"), Some("123-456-7890"), "joe2@example.com"),
