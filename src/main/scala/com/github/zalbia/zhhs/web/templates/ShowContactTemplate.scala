@@ -9,19 +9,10 @@ object ShowContactTemplate {
     LayoutTemplate.noFlashedMessages(
       h1(
         (contact.firstname, contact.lastname) match {
-          case (Some(firstname), Some(lastname)) =>
-            if (firstname.nonEmpty && lastname.nonEmpty)
-              s"$firstname $lastname"
-            else if (firstname.nonEmpty && lastname.isEmpty)
-              firstname
-            else if (firstname.isEmpty && lastname.nonEmpty)
-              lastname
-            else
-              em("Unnamed Contact")
-
-          case (Some(firstname), None) => firstname
-          case (None, Some(lastname))  => lastname
-          case (None, None)            => em("Unnamed Contact")
+          case (Some(firstname), Some(lastname)) => s"$firstname $lastname"
+          case (Some(firstname), None)           => firstname
+          case (None, Some(lastname))            => lastname
+          case (None, None)                      => em("Unnamed Contact")
         }
       ) ++
         div(
