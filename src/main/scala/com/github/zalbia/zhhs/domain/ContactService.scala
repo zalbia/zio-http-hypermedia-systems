@@ -30,7 +30,7 @@ object ContactService {
         override def all(page: Int): UIO[List[Contact]] = {
           val pageStart = (page - 1) * Settings.pageSize
           val pageEnd   = pageStart + Settings.pageSize
-          contactsRef.get.map(_.take(Settings.pageSize).slice(pageStart, pageEnd).toList)
+          contactsRef.get.map(_.slice(pageStart, pageEnd).toList)
         }
 
         override def count: UIO[Int] =

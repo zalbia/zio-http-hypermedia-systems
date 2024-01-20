@@ -32,7 +32,7 @@ object IndexTemplate {
       input(typeAttr        := "submit", valueAttr := "Search"),
     )
 
-  private def contactsForm(contacts: List[Contact]): Html =
+  private def contactsForm(contacts: List[Contact], page: Int): Html =
     form(
       xAttr("data") := "{ selected: [] }",
       template(
@@ -64,6 +64,17 @@ object IndexTemplate {
         ),
         tBody(RowsTemplate(contacts)),
       ),
+      div(
+        span(
+          styleAttr := Seq("float" -> "right"),
+          Option.when(page > 1) {
+            a(hrefAttr := s"/contacts?page=${page - 1}", "Previous")
+          },
+          Option.when(contacts.length == 10) {
+            a(hrefAttr := s"/contacts?page=${page + 1}", "Next")
+          },
+        )
+      ),
       button(
         hxAttr("delete")  := "/contacts",
         hxAttr("confirm") := "Are you sure you want to delete these contacts?",
@@ -91,10 +102,11 @@ object IndexTemplate {
     query: Option[String] = None,
     contacts: List[Contact] = List.empty,
     flashMessage: Option[String] = None,
+    page: Int = 1,
   ): Html =
     LayoutTemplate(
       searchForm(query) ++
-        contactsForm(contacts) ++
+        contactsForm(contacts, page) ++
         addContact,
       flashMessage,
     )

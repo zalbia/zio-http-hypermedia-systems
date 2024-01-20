@@ -23,7 +23,7 @@ private[web] object ContactController {
           if (request.headers.get("HX-Trigger").contains("search"))
             Response.html(RowsTemplate(contactsFound))
           else
-            Response.html(IndexTemplate(search, contactsFound, request.flashMessage))
+            Response.html(IndexTemplate(search, contactsFound, request.flashMessage, page = page))
         }
       },
     Method.DELETE / "contacts"                       ->
