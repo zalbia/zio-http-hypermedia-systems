@@ -58,18 +58,19 @@ object RowsTemplate {
       )
     }
 
-  def navigation(contacts: List[Contact], page: Int): Option[Dom] =
+  private def navigation(contacts: List[Contact], page: Int): Option[Dom] =
     Option.when(contacts.length == Settings.pageSize) {
       tr(
         td(
           colSpanAttr := "5",
           styleAttr   := List("text-align" -> "center"),
-          button(
-            hxAttr("target") := "closest tr",
-            hxAttr("swap")   := "outerHTML",
-            hxAttr("select") := "tbody > tr",
-            hxAttr("get")    := s"/contacts?page=${page + 1}",
-            "Load More",
+          span(
+            hxAttr("target")  := "closest tr",
+            hxAttr("trigger") := "revealed",
+            hxAttr("swap")    := "outerHTML",
+            hxAttr("select")  := "tbody > tr",
+            hxAttr("get")     := s"/contacts?page=${page + 1}",
+            "Loading More...",
           ),
         )
       )
