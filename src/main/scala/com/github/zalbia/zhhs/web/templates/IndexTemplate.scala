@@ -62,18 +62,7 @@ object IndexTemplate {
             th(),
           )
         ),
-        tBody(RowsTemplate(contacts)),
-      ),
-      div(
-        span(
-          styleAttr := Seq("float" -> "right"),
-          Option.when(page > 1) {
-            a(hrefAttr := s"/contacts?page=${page - 1}", "Previous")
-          },
-          Option.when(contacts.length == 10) {
-            a(hrefAttr := s"/contacts?page=${page + 1}", "Next")
-          },
-        )
+        tBody(RowsTemplate(contacts, page)),
       ),
       button(
         hxAttr("delete")  := "/contacts",

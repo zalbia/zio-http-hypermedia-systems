@@ -2,10 +2,15 @@ package com.github.zalbia.zhhs.web.templates
 
 import com.github.zalbia.zhhs.domain.Contact
 import ExtraAttributes.*
+import com.github.zalbia.zhhs.Settings
 import zio.http.template.*
 
 object RowsTemplate {
-  def apply(contacts: List[Contact]): List[Dom] =
+
+  def apply(contacts: List[Contact], page: Int): List[Dom] =
+    contactRows(contacts) ++ navigation(contacts, page)
+
+  private def contactRows(contacts: List[Contact]) =
     contacts.map { contact =>
       val firstname = contact.firstname.getOrElse("N/A")
       val lastname  = contact.lastname.getOrElse("N/A")
@@ -53,4 +58,20 @@ object RowsTemplate {
       )
     }
 
+  def navigation(contacts: List[Contact], page: Int): Option[Dom] =
+    Option.when(contacts.length == Settings.pageSize) {
+      tr(
+        td(
+          colSpanAttr := "5",
+          styleAttr   := List("text-align" -> "center"),
+          button(
+            hxAttr("target") := "closest tr",
+            hxAttr("swap")   := "outerHTML",
+            hxAttr("select") := "tbody > tr",
+            hxAttr("get")    := s"/contacts?page=${page + 1}",
+            "Load More",
+          ),
+        )
+      )
+    }
 }

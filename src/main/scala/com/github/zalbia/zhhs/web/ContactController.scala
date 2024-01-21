@@ -21,7 +21,7 @@ private[web] object ContactController {
                            }
         } yield {
           if (request.headers.get("HX-Trigger").contains("search"))
-            Response.html(RowsTemplate(contactsFound))
+            Response.html(RowsTemplate(contactsFound, page))
           else
             Response.html(IndexTemplate(search, contactsFound, request.flashMessage, page = page))
         }
