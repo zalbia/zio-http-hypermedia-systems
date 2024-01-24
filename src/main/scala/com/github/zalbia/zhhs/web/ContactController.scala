@@ -31,7 +31,7 @@ private[web] object ContactController {
         for {
           selectedIds <- request.body.asURLEncodedForm.orDie
                            .map(_.formData.collect { case FormField.Simple("selected_contact_ids", value) => value })
-          contactIds   = selectedIds.map(_.split(',')).flatten.toSet
+          contactIds   = selectedIds.flatMap(_.split(',')).toSet
           _           <- contactService(_.deleteAll(contactIds))
         } yield Response.seeOther(URL.root / "contacts").addExpiringFlashMessage("Deleted Contacts")
       },
