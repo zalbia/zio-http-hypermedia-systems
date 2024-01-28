@@ -1,7 +1,7 @@
 package com.github.zalbia.zhhs.web
 
-import com.github.zalbia.zhhs.domain.ContactServiceError.*
 import com.github.zalbia.zhhs.domain.*
+import com.github.zalbia.zhhs.domain.ContactServiceError.*
 import com.github.zalbia.zhhs.web.templates.*
 import zio.ZIO
 import zio.http.*
@@ -14,12 +14,10 @@ private[web] object ContactController {
       Handler.fromFunctionZIO { (request: Request) =>
         val search = request.url.queryParams.get("q")
         val page   = request.url.queryParams.get("page").map(_.toInt).getOrElse(1) // unsafe!
-        for {
-          contactsFound <- search match {
-                             case None => contactService(_.all(page))
-                             case _    => contactService(_.search(search, page))
-                           }
-        } yield {
+        (search match {
+          case None => contactService(_.all(page))
+          case _    => contactService(_.search(search, page))
+        }).map { contactsFound =>
           if (request.headers.get("HX-Trigger").contains("search"))
             Response.html(RowsTemplate(contactsFound))
           else
