@@ -1,6 +1,6 @@
 package com.github.zalbia.zhhs.web.templates
 
-import com.github.zalbia.zhhs.domain.Contact
+import com.github.zalbia.zhhs.domain.{Archiver, Contact}
 import com.github.zalbia.zhhs.web.templates.ExtraAttributes.*
 import com.github.zalbia.zhhs.web.templates.ExtraElements.*
 import zio.http.template.*
@@ -102,10 +102,12 @@ object IndexTemplate {
     query: Option[String] = None,
     contacts: List[Contact] = List.empty,
     flashMessage: Option[String] = None,
+    archiverState: Archiver.State = Archiver.State.initialState,
     page: Int = 1,
   ): Html =
     LayoutTemplate(
-      searchForm(query) ++
+      ArchiveUiTemplate(archiverState) ++
+        searchForm(query) ++
         contactsForm(contacts, page) ++
         addContact,
       flashMessage,
