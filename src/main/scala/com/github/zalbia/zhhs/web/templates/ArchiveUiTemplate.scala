@@ -28,9 +28,7 @@ object ArchiveUiTemplate {
               div(
                 idAttr    := "archive-progress",
                 classAttr := List("progress-bar"),
-                styleAttr := List(
-                  "width" -> (archiverState.progress * 100).toString
-                ),
+                styleAttr := List("width" -> (archiverState.progress * 100).toString),
               ),
             ),
           )
