@@ -37,7 +37,7 @@ private[web] object ContactController {
     Method.GET / "contacts" / "count"                ->
       Handler.responseZIO(contactService(_.count).map(count => Response.text(s"($count total contacts)"))),
     Method.GET / "contacts" / "new"                  ->
-      Handler.html(NewContactTemplate(NewContactFormData.empty)),
+      Handler.response(Response.twirl(views.html.newContact(NewContactFormData.empty))),
     Method.POST / "contacts" / "new"                 ->
       Handler.fromFunctionZIO { (request: Request) =>
         request.body.asURLEncodedForm.foldZIO(
@@ -49,10 +49,10 @@ private[web] object ContactController {
               .catchAll {
                 case EmailAlreadyExistsError(email) =>
                   val formDataWithError = contactFormData.addError(s"""Email "$email" already exists""")
-                  ZIO.succeed(Response.html(NewContactTemplate(formDataWithError)))
+                  ZIO.succeed(Response.twirl(views.html.newContact(formDataWithError)))
                 case MissingEmailError              =>
                   val formDataWithError = contactFormData.addError(s"An email is required")
-                  ZIO.succeed(Response.html(NewContactTemplate(formDataWithError)))
+                  ZIO.succeed(Response.twirl(views.html.newContact(formDataWithError)))
               }
           },
         )
