@@ -2,7 +2,7 @@ package com.github.zalbia.zhhs.web
 
 import com.github.zalbia.zhhs.domain.*
 import com.github.zalbia.zhhs.domain.ContactServiceError.*
-import com.github.zalbia.zhhs.web.templates.*
+import com.github.zalbia.zhhs.web.view.*
 import zio.ZIO
 import zio.http.*
 import zio.http.extensions.*
@@ -85,7 +85,7 @@ private[web] object ContactController {
         contactService(_.find(contactId))
           .map {
             case Some(contact) =>
-              Response.html(EditContactTemplate(EditContactFormData.fromContact(contact)))
+              Response.twirl(views.html.editContact(EditContactFormData.fromContact(contact)))
             case None          =>
               Response.notFound(s"Contact with ID '$contactId' not found")
           }
@@ -103,10 +103,10 @@ private[web] object ContactController {
                   ZIO.succeed(Response.notFound(s"Contact with id '$contactId' doesn't exist'"))
                 case EmailAlreadyExistsError(email)   =>
                   val formDataWithError = contactFormData.addError(s"""Email "$email" already exists""")
-                  ZIO.succeed(Response.html(EditContactTemplate(formDataWithError)))
+                  ZIO.succeed(Response.twirl(views.html.editContact(formDataWithError)))
                 case MissingEmailError                =>
                   val formDataWithError = contactFormData.addError("An email is required")
-                  ZIO.succeed(Response.html(EditContactTemplate(formDataWithError)))
+                  ZIO.succeed(Response.twirl(views.html.editContact(formDataWithError)))
               }
           },
         )

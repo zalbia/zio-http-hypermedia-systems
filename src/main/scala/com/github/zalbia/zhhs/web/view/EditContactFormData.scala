@@ -1,7 +1,7 @@
-package com.github.zalbia.zhhs.web.templates
+package com.github.zalbia.zhhs.web.view
 
 import com.github.zalbia.zhhs.domain.{Contact, UpdateContactDto}
-import com.github.zalbia.zhhs.web.templates.EditContactFormData.ErrorField
+import com.github.zalbia.zhhs.web.view.EditContactFormData.ErrorField
 import zio.http.Form
 
 final case class EditContactFormData(
