@@ -1,0 +1,23 @@
+@import com.github.zalbia.zhhs.domain.Contact
+@(contact: Contact)
+@main(None) {
+<h1>
+    @{(contact.firstname, contact.lastname) match {
+    case (Some(firstname), Some(lastname)) => s"$firstname $lastname"
+    case (Some(firstname), None) => firstname
+    case (None, Some(lastname)) => lastname
+    case (None, None) => <em>Unnamed Contact</em>
+    }
+    }
+</h1>
+
+<div>
+    <div>Phone: @{contact.phone}</div>
+    <div>Email: @{contact.email}</div>
+</div>
+
+<p>
+    <a href="/contacts/@{contact.id}/edit">Edit</a>
+    <a href="/contacts">Back</a>
+</p>
+}

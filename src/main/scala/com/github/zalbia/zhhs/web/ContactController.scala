@@ -61,7 +61,7 @@ private[web] object ContactController {
       Handler.fromFunctionZIO[(String, Request)] { case (contactId, _) =>
         contactService(_.find(contactId)).map {
           case Some(contact) =>
-            Response.html(ShowContactTemplate(contact))
+            Response.twirl(views.html.showContact(contact))
           case None          =>
             Response.notFound(s"Contact with ID '$contactId' not found")
         }
