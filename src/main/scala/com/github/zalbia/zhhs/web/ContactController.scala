@@ -5,6 +5,7 @@ import com.github.zalbia.zhhs.domain.ContactServiceError.*
 import com.github.zalbia.zhhs.web.templates.*
 import zio.ZIO
 import zio.http.*
+import zio.http.extensions.*
 
 private[web] object ContactController {
   lazy val contactRoutes: Routes[ContactService, Nothing] = Routes(
@@ -19,9 +20,9 @@ private[web] object ContactController {
           case _    => contactService(_.search(search, page))
         }).map { contactsFound =>
           if (request.headers.get("HX-Trigger").contains("search"))
-            Response.html(RowsTemplate(contactsFound))
+            Response.twirl(partials.html.rows(contactsFound))
           else
-            Response.html(IndexTemplate(search, contactsFound, request.flashMessage, page = page))
+            Response.twirl(views.html.index(search, contactsFound, request.flashMessage, page = page))
         }
       },
     Method.DELETE / "contacts"                       ->

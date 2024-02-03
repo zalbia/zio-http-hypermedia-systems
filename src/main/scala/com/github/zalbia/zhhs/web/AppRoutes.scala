@@ -8,8 +8,6 @@ object AppRoutes {
 
   private val corsConfig = CorsConfig(allowedOrigin = _ => Some(Header.AccessControlAllowOrigin.All))
 
-  private val staticPath = Middleware.serveResources(Path.empty / "static")
-
   val routes: HttpApp[ContactService] =
-    ContactController.contactRoutes.toHttpApp @@ cors(corsConfig) @@ staticPath
+    ContactController.contactRoutes.toHttpApp @@ cors(corsConfig) @@ serveResources(Path.empty / "static")
 }

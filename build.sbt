@@ -30,6 +30,7 @@ addCommandAlias("rst", "restart")
 
 lazy val root =
   (project in file("."))
+    .enablePlugins(SbtTwirl)
     .settings(stdSettings*)
     .settings(Revolver.enableDebugging())
     .settings(reLogTag := "zio-http-hypermedia-systems")
